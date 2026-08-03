@@ -14,8 +14,15 @@ async def test_describe_scheme_zh(mock_openai):
     mock_openai.return_value.chat = mock_chat
 
     client = DeepSeekClient(api_key="test-key")
-    params = BuildingParams(style="modern", floors=3, width_m=10.0, depth_m=8.0,
-                            materials=["glass"], roof="flat", environment="suburb")
+    params = BuildingParams(
+        style="modern",
+        floors=3,
+        width_m=10.0,
+        depth_m=8.0,
+        materials=["glass"],
+        roof="flat",
+        environment="suburb",
+    )
     text = await client.describe_scheme(params, lang="zh")
     assert "现代风格" in text
 

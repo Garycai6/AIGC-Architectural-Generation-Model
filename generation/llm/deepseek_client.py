@@ -40,10 +40,10 @@ class DeepSeekClient:
         """自然语言描述 → BuildingParams。要求模型输出严格 JSON。"""
         system = (
             "把用户的自然语言建筑描述转换为 JSON 参数。只输出 JSON,不要额外文字。"
-            '字段:style(modern/neoclassic/european/nordic)、floors(1-6)、'
-            'width_m(6-20)、depth_m(5-18)、materials(数组,glass/stone/brick/wood)、'
-            'roof(flat/pitched/hipped)、environment(urban/suburb/rural/seaside)。'
-            '无法确定的字段给合理默认值。'
+            "字段:style(modern/neoclassic/european/nordic)、floors(1-6)、"
+            "width_m(6-20)、depth_m(5-18)、materials(数组,glass/stone/brick/wood)、"
+            "roof(flat/pitched/hipped)、environment(urban/suburb/rural/seaside)。"
+            "无法确定的字段给合理默认值。"
         )
         resp = await self._client.chat.completions.create(
             model=DEEPSEEK_MODEL,
