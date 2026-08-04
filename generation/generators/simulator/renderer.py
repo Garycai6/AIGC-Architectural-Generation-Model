@@ -1,7 +1,7 @@
 """模拟器渲染器——将立面/平面线稿落盘为 PNG,暴露异步入口。"""
 
 import asyncio
-import pathlib
+from pathlib import Path
 from typing import Literal
 
 from PIL import Image, ImageDraw
@@ -118,7 +118,7 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
             )
 
 
-def _render_facade_png(spec: FacadeSpec, out_path: object) -> None:
+def _render_facade_png(spec: FacadeSpec, out_path: Path) -> None:
     """将 FacadeSpec 渲染为 3/4 透视 PNG。"""
     img = Image.new("RGB", FACADE_OUTPUT_PX, "#ffffff")
     draw = ImageDraw.Draw(img)
@@ -126,7 +126,7 @@ def _render_facade_png(spec: FacadeSpec, out_path: object) -> None:
     img.save(str(out_path))
 
 
-def _render_floorplan_png(spec: FloorplanSpec, out_path: object) -> None:
+def _render_floorplan_png(spec: FloorplanSpec, out_path: Path) -> None:
     """将 FloorplanSpec 渲染为平面示意 PNG。"""
     img = Image.new("RGB", FLOORPLAN_OUTPUT_PX, "#ffffff")
     draw = ImageDraw.Draw(img)
@@ -145,15 +145,14 @@ def _render_floorplan_png(spec: FloorplanSpec, out_path: object) -> None:
 def _render_sync(
     params: BuildingParams,
     scheme_id: str,
-    out_dir: object,
+    out_dir: Path,
     lang: str,
 ) -> GenerationArtifact:
     """同步绘制 facade.png 与 floorplan.png,打包为 GenerationArtifact。"""
-    out = pathlib.Path(out_dir)
     facade = build_facade_spec(params)
-    _render_facade_png(facade, out / FACADE_FILE)
+    _render_facade_png(facade, out_dir / FACADE_FILE)
     floorplan = build_floorplan_spec(params, lang=lang)
-    _render_floorplan_png(floorplan, out / FLOORPLAN_FILE)
+    _render_floorplan_png(floorplan, out_dir / FLOORPLAN_FILE)
     return GenerationArtifact(
         scheme_id=scheme_id,
         images=[
@@ -166,7 +165,7 @@ def _render_sync(
 async def render_scheme(
     params: BuildingParams,
     scheme_id: str,
-    out_dir: object,
+    out_dir: Path,
     lang: Literal["en", "zh"] = "zh",
 ) -> GenerationArtifact:
     """模拟器渲染入口——同步绘制在线程池,避免阻塞事件循环。"""

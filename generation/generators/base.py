@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal, Protocol
 
 from pydantic import BaseModel
@@ -22,6 +23,6 @@ class Generator(Protocol):
         self,
         params: BuildingParams,
         scheme_id: str,
-        out_dir: object,
+        out_dir: Path,
         lang: Literal["en", "zh"] = "zh",
     ) -> GenerationArtifact: ...
