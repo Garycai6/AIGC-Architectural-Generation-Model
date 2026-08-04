@@ -74,11 +74,14 @@ class FacadeSpec(BaseModel):
 
 
 def _roof_geom(params: BuildingParams) -> RoofGeometry:
+    """按 roof 参数生成屋顶几何。非法值显式抛错,不静默兜底。"""
     if params.roof == "flat":
         return RoofGeometry(kind="flat", ridge_y=None)
     if params.roof == "pitched":
         return RoofGeometry(kind="pitched", ridge_y=20)
-    return RoofGeometry(kind="hipped", ridge_y=30)
+    if params.roof == "hipped":
+        return RoofGeometry(kind="hipped", ridge_y=30)
+    raise ValueError(f"Unknown roof kind: {params.roof}")
 
 
 def _window_cols(width_m: float) -> int:

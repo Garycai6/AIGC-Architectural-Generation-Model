@@ -91,9 +91,17 @@ def test_roof_geom_kinds():
     assert flat.kind == "flat"
     assert flat.ridge_y is None
     assert pitched.kind == "pitched"
-    assert pitched.ridge_y is not None
+    assert pitched.ridge_y == 20
     assert hipped.kind == "hipped"
-    assert hipped.ridge_y is not None
+    assert hipped.ridge_y == 30
+
+
+def test_roof_geom_unknown_raises():
+    import pytest
+
+    # 非法 roof 值应显式抛错,而非静默兜底为 hipped
+    with pytest.raises(ValueError):
+        _roof_geom(_params(roof="hipped").model_copy(update={"roof": "dome"}))
 
 
 def test_style_config_abstract():
