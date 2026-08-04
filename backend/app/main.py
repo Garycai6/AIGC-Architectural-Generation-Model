@@ -1,5 +1,8 @@
+import pathlib
+
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from backend.app.api.generate import router as generate_router
 from backend.app.core.config import Settings, get_settings
@@ -14,6 +17,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {"status": "ok"}
 
     app.include_router(generate_router, prefix="/api/v1")
+
+    cache_dir = pathlib.Path(app.state.settings.cache_dir)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/images", StaticFiles(directory=str(cache_dir)), name="images")
     return app
 
 
