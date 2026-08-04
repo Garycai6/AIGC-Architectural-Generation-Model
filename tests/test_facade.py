@@ -1,0 +1,53 @@
+from generation.generators.simulator.facade import (
+    MATERIAL_COLORS,
+    build_facade_spec,
+)
+from generation.params.model import BuildingParams
+
+
+def _params(**overrides):
+    base = dict(
+        style="modern",
+        floors=3,
+        width_m=10.0,
+        depth_m=8.0,
+        materials=["glass"],
+        roof="flat",
+        environment="suburb",
+    )
+    base.update(overrides)
+    return BuildingParams(**base)
+
+
+def test_build_facade_spec_basic():
+    spec = build_facade_spec(_params(floors=3))
+    assert spec.width_px == 640
+    assert spec.height_px == 480
+    assert spec.floors == 3
+    assert len(spec.windows) > 0
+    for w in spec.windows:
+        assert 0 <= w.x < spec.width_px
+        assert 0 <= w.y < spec.height_px
+        assert w.w > 0 and w.h > 0
+
+
+def test_build_facade_spec_window_count_scales_with_floors():
+    spec1 = build_facade_spec(_params(floors=1))
+    spec3 = build_facade_spec(_params(floors=3))
+    # 每层都有窗;总窗数随层数单调不减
+    assert len(spec3.windows) >= len(spec1.windows) + 1
+
+
+def test_roof_style_variation():
+    flat = build_facade_spec(_params(roof="flat"))
+    pitched = build_facade_spec(_params(roof="pitched"))
+    assert flat.roof == "flat"
+    assert pitched.roof == "pitched"
+
+
+def test_material_palette_keys():
+    assert set(MATERIAL_COLORS.keys()) == {"glass", "stone", "brick", "wood"}
+    for pal in MATERIAL_COLORS.values():
+        assert pal.main.startswith("#")
+        assert pal.accent.startswith("#")
+        assert pal.trim.startswith("#")
