@@ -10,3 +10,11 @@
 - 不同风格(modern/neoclassic/nordic)、不同层数(2/3/6)、不同语言(zh/en)参数均正常出图
 - 非法参数(style=baroque)返回 422
 - 全量测试 33 passed;ruff check + format 全绿
+
+# 阶段 2.5 冒烟验证记录 (2026-08-05)
+- 屋顶差异化:4 风格 × 3 屋顶(flat/pitched/hipped)共 12 组合,同风格不同屋顶 PNG 字节全部不同
+- 风格差异化:3 屋顶 × 4 风格(modern/neoclassic/european/nordic),同屋顶不同风格 PNG 字节全部不同
+- 视觉元素生效:写实屋顶(屋脊/坡面/山墙)、檐口+山花(neoclassic/european)、拱形窗(european)、风格配色叠加
+- 非法参数(style=baroque)返回 422
+- 全量测试 45 passed;ruff check + format 全绿
+
