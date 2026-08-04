@@ -91,3 +91,21 @@ def test_render_roof_kinds_produce_different_png(tmp_path: Path):
     hipped_bytes = files["hipped"].read_bytes()
     assert flat_bytes != pitched_bytes
     assert pitched_bytes != hipped_bytes
+
+
+def test_render_styles_produce_different_png(tmp_path: Path):
+    from generation.generators.simulator.facade import build_facade_spec
+
+    files = {}
+    for style in ("modern", "neoclassic", "european", "nordic"):
+        spec = build_facade_spec(_params(style=style))
+        out = tmp_path / f"{style}.png"
+        renderer._render_facade_png(spec, out)
+        files[style] = out
+        assert out.exists()
+        assert out.stat().st_size > 0
+    # 四种风格 PNG 不应完全相同
+    b1 = files["modern"].read_bytes()
+    assert b1 != files["neoclassic"].read_bytes()
+    assert b1 != files["european"].read_bytes()
+    assert b1 != files["nordic"].read_bytes()

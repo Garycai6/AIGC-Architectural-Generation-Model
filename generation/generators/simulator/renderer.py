@@ -103,6 +103,25 @@ def _draw_roof(draw: ImageDraw.ImageDraw, spec: FacadeSpec, front, back) -> None
         draw.line([cx, ridge, back_cx, ridge], fill=spec.palette.trim, width=3)
 
 
+def _draw_cornice(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
+    c = spec.cornice
+    if not c.has:
+        return
+    x0, y0 = 30, 30
+    x1 = spec.width_px - 30
+    cy = (c.y or 0) + y0
+    draw.rectangle(
+        [x0, cy, x1, cy + c.thickness],
+        fill=spec.palette.trim, outline=spec.palette.trim,
+    )
+    # 山花三角楣(neoclassic/european 通用):檐口上方三角
+    pediment_h = max(10, c.thickness * 2)
+    draw.polygon(
+        [(x0, cy), (x1, cy), ((x0 + x1) / 2, cy - pediment_h)],
+        outline=spec.palette.trim, fill=spec.palette.accent,
+    )
+
+
 def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
     """绘制 3/4 透视:正立面投影 + 侧壁与顶面的体量感。"""
     x0, y0 = 30, 30
@@ -117,6 +136,8 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
     draw.polygon(pts_front, fill=spec.palette.main, outline=spec.palette.trim)
     # 屋顶(按 RoofGeometry.kind 绘制:flat/pitched/hipped)
     _draw_roof(draw, spec, front, back)
+    # 檐口 + 山花(在正立面上方)
+    _draw_cornice(draw, spec)
     # 侧壁(右):正立面右边 → 侧壁右边
     draw.polygon(
         [
@@ -131,13 +152,30 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
     # 窗在正立面(投影深度 0;project_iso depth=0 为恒等变换,
     # 故下方交叉线可用未投影坐标,与 project_rect 输出一致)
     for w in spec.windows:
-        wp = project_rect((w.x + x0, w.y + y0, w.w, w.h), depth=0)
-        draw.polygon(
-            [(p.x, p.y) for p in wp],
-            fill=spec.palette.accent,
-            outline=spec.palette.trim,
-            width=2,
-        )
+        wx, wy, ww, wh = w.x + x0, w.y + y0, w.w, w.h
+        if w.arch:
+            # 拱形窗:下部矩形 + 顶部半圆弧(pieslice 上半圆)
+            draw.rectangle(
+                [wx, wy, wx + ww, wy + wh],
+                fill=spec.palette.accent,
+                outline=spec.palette.trim,
+                width=2,
+            )
+            draw.pieslice(
+                [wx, wy, wx + ww, wy + wh],
+                180, 360,
+                fill=spec.palette.accent,
+                outline=spec.palette.trim,
+                width=2,
+            )
+        else:
+            wp = project_rect((w.x + x0, w.y + y0, w.w, w.h), depth=0)
+            draw.polygon(
+                [(p.x, p.y) for p in wp],
+                fill=spec.palette.accent,
+                outline=spec.palette.trim,
+                width=2,
+            )
         if w.cross:
             cx = w.x + x0 + w.w // 2
             cy = w.y + y0 + w.h // 2
