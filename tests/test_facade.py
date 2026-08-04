@@ -110,3 +110,42 @@ def test_style_config_abstract():
 
     with pytest.raises(TypeError):
         StyleConfig()
+
+
+def test_style_window_ratio_differs():
+    from generation.generators.simulator.facade import STYLE_REGISTRY  # noqa: F401
+
+    modern = build_facade_spec(_params(style="modern"))
+    neoclassic = build_facade_spec(_params(style="neoclassic"))
+    # 窗宽高比不同(横长 vs 竖窗)
+    m_ratio = modern.windows[0].w / modern.windows[0].h
+    n_ratio = neoclassic.windows[0].w / neoclassic.windows[0].h
+    assert m_ratio > n_ratio
+
+
+def test_style_cornice_differs():
+    modern = build_facade_spec(_params(style="modern"))
+    neoclassic = build_facade_spec(_params(style="neoclassic"))
+    assert modern.cornice.has is False
+    assert neoclassic.cornice.has is True
+    assert neoclassic.cornice.thickness > modern.cornice.thickness
+
+
+def test_style_palette_differs():
+    modern = build_facade_spec(_params(style="modern", materials=["stone"]))
+    nordic = build_facade_spec(_params(style="nordic", materials=["stone"]))
+    # 同材质不同风格 → 不同配色(风格叠加材质)
+    assert modern.palette.main != nordic.palette.main
+
+
+def test_style_registry_keys():
+    from generation.generators.simulator.facade import STYLE_REGISTRY
+
+    assert set(STYLE_REGISTRY.keys()) == {"modern", "neoclassic", "european", "nordic"}
+
+
+def test_european_arch_window():
+    european = build_facade_spec(_params(style="european"))
+    assert european.windows[0].arch is True
+    modern = build_facade_spec(_params(style="modern"))
+    assert modern.windows[0].arch is False
