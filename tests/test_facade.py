@@ -51,3 +51,19 @@ def test_material_palette_keys():
         assert pal.main.startswith("#")
         assert pal.accent.startswith("#")
         assert pal.trim.startswith("#")
+
+
+def test_window_cols_by_building_width():
+    narrow = build_facade_spec(_params(width_m=8.0, floors=1))
+    wide = build_facade_spec(_params(width_m=15.0, floors=1))
+    narrow_cols = len([w for w in narrow.windows if w.y == narrow.windows[0].y])
+    wide_cols = len([w for w in wide.windows if w.y == wide.windows[0].y])
+    assert narrow_cols == 2
+    assert wide_cols == 3
+
+
+def test_windows_within_canvas_floors6():
+    spec = build_facade_spec(_params(floors=6))
+    for w in spec.windows:
+        assert 0 <= w.x and w.x + w.w <= spec.width_px
+        assert 0 <= w.y and w.y + w.h <= spec.height_px

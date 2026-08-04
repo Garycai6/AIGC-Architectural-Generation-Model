@@ -232,6 +232,22 @@ def test_material_palette_keys():
         assert pal.main.startswith("#")
         assert pal.accent.startswith("#")
         assert pal.trim.startswith("#")
+
+
+def test_window_cols_by_building_width():
+    narrow = build_facade_spec(_params(width_m=8.0, floors=1))
+    wide = build_facade_spec(_params(width_m=15.0, floors=1))
+    narrow_cols = len([w for w in narrow.windows if w.y == narrow.windows[0].y])
+    wide_cols = len([w for w in wide.windows if w.y == wide.windows[0].y])
+    assert narrow_cols == 2
+    assert wide_cols == 3
+
+
+def test_windows_within_canvas_floors6():
+    spec = build_facade_spec(_params(floors=6))
+    for w in spec.windows:
+        assert 0 <= w.x and w.x + w.w <= spec.width_px
+        assert 0 <= w.y and w.y + w.h <= spec.height_px
 ```
 
 - [ ] **Step 2: 运行测试验证失败**
@@ -248,11 +264,12 @@ Expected: FAIL,`ModuleNotFoundError: No module named 'generation.generators.simu
 
 ```python
 # generation/generators/simulator/facade.py
+from typing import Literal
+
 from pydantic import BaseModel
 
-from generation.params.model import BuildingParams
+from generation.params.model import FLOOR_HEIGHT_M, BuildingParams
 
-FLOOR_HEIGHT_M = 3.2  # 与 params.model 一致
 MAX_WIDTH_PX = 640
 MAX_HEIGHT_PX = 480
 
@@ -284,45 +301,40 @@ class FacadeSpec(BaseModel):
     height_px: int
     floors: int
     windows: list[WindowRect]
-    roof: str
+    roof: Literal["flat", "pitched", "hipped"]
     palette: MaterialPalette
 
 
-def _window_cols(width_px: int) -> int:
-    # 按面宽推导窗列数:6-10m 两列,11-20m 三列
-    return 2 if width_px < 0.5 * MAX_WIDTH_PX else 3
+def _window_cols(width_m: float) -> int:
+    # 按建筑面宽推导窗列数:6-10m 两列,11-20m 三列
+    return 2 if width_m < 11 else 3
 
 
-def _window_row(floor_idx: int, floors: int, window_h: int) -> int:
-    # 每层窗在层内垂直居中,层间留缝
-    return 40 + floor_idx * (window_h + 60) + 10
+def _window_rows(floors: int, height_px: int, margin: int) -> tuple[list[int], int]:
+    """按层数在画布高度内均分楼层,返回每层窗的 y 坐标与统一的窗高。
 
-
-def _window_rows(floors: int, height_px: int, margin: int, scale: float) -> list[int]:
-    """按层数在画布高度内均分楼层,返回每层窗的 y 坐标(层内垂直居中)。
-
-    保证任意 floors(1-6)下窗口都不超出画布。
+    窗在层内垂直居中,保证任意 floors(1-6)下窗口都不超出画布。
     """
     avail_h = height_px - 2 * margin
     floor_h = avail_h // floors
     window_h = max(20, floor_h - 24)
-    return [margin + f * floor_h + (floor_h - window_h) // 2 for f in range(floors)]
+    ys = [margin + f * floor_h + (floor_h - window_h) // 2 for f in range(floors)]
+    return ys, window_h
 
 
 def build_facade_spec(params: BuildingParams, width_px: int = 640, height_px: int = 480) -> FacadeSpec:
-    scale = width_px / MAX_WIDTH_PX  # 相对默认面宽的比例
+    scale = width_px / MAX_WIDTH_PX  # 相对默认画布宽的比例
     palette = MATERIAL_COLORS[params.materials[0]]
     floors = params.floors
     margin = int(40 * scale)
     window_w = int(90 * scale)
-    cols = _window_cols(width_px)
+    cols = _window_cols(params.width_m)
     gap = (width_px - 2 * margin - cols * window_w) // (cols - 1) if cols > 1 else 0
 
-    ys = _window_rows(floors, height_px, margin, scale)
-    window_h = (ys[1] - ys[0] - 10) if floors > 1 else max(20, (height_px - 2 * margin) - 60)
+    ys, window_h = _window_rows(floors, height_px, margin)
 
     windows: list[WindowRect] = []
-    for floor_idx, y in enumerate(ys):
+    for y in ys:
         for c in range(cols):
             x = margin + c * (window_w + gap)
             windows.append(WindowRect(x=x, y=y, w=window_w, h=window_h))
@@ -340,7 +352,7 @@ def build_facade_spec(params: BuildingParams, width_px: int = 640, height_px: in
 - [ ] **Step 4: 运行测试验证通过**
 
 Run: `uv run pytest tests/test_facade.py -v`
-Expected: 4 个测试全部 PASS
+Expected: 6 个测试全部 PASS
 
 - [ ] **Step 5: 提交**
 
