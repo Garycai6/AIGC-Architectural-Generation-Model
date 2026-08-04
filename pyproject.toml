@@ -40,6 +40,7 @@ packages = ["backend", "generation", "data", "training"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["docs/"]  # 文档内代码块不受 ruff 格式约束
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
