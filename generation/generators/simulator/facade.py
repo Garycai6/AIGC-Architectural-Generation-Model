@@ -37,6 +37,7 @@ class CorniceSpec(BaseModel):
     has: bool
     thickness: int = 4
     y: int | None = None
+    pediment: bool = False
 
 
 class StyleConfig(ABC):
@@ -117,7 +118,7 @@ class NeoclassicStyle(StyleConfig):
     window_arch = False
 
     def cornice(self, width_px: int) -> CorniceSpec:
-        return CorniceSpec(has=True, thickness=8, y=20)
+        return CorniceSpec(has=True, thickness=8, y=20, pediment=True)
 
     def apply_palette(self, mat: MaterialPalette) -> MaterialPalette:
         # 暖灰:主色加灰调,降低饱和度
@@ -134,7 +135,7 @@ class EuropeanStyle(StyleConfig):
     window_arch = True
 
     def cornice(self, width_px: int) -> CorniceSpec:
-        return CorniceSpec(has=True, thickness=5, y=16)
+        return CorniceSpec(has=True, thickness=5, y=16, pediment=True)
 
     def apply_palette(self, mat: MaterialPalette) -> MaterialPalette:
         # 暖调:主色偏暖

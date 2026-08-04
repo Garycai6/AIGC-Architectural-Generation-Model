@@ -114,12 +114,13 @@ def _draw_cornice(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
         [x0, cy, x1, cy + c.thickness],
         fill=spec.palette.trim, outline=spec.palette.trim,
     )
-    # 山花三角楣(neoclassic/european 通用):檐口上方三角
-    pediment_h = max(10, c.thickness * 2)
-    draw.polygon(
-        [(x0, cy), (x1, cy), ((x0 + x1) / 2, cy - pediment_h)],
-        outline=spec.palette.trim, fill=spec.palette.accent,
-    )
+    # 山花三角楣:仅 pediment=True 的风格(neoclassic/european)画
+    if c.pediment:
+        pediment_h = max(10, c.thickness * 2)
+        draw.polygon(
+            [(x0, cy), (x1, cy), ((x0 + x1) / 2, cy - pediment_h)],
+            outline=spec.palette.trim, fill=spec.palette.accent,
+        )
 
 
 def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
