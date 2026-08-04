@@ -1,9 +1,8 @@
 import { useState } from "react";
+import { messages } from "../../i18n";
 
 const STYLES = ["modern", "neoclassic", "european", "nordic"];
 const MATERIALS = ["glass", "stone", "brick", "wood"];
-const ROOFS = ["flat", "pitched", "hipped"];
-const ENVS = ["urban", "suburb", "rural", "seaside"];
 
 export default function ParamForm() {
   const [style, setStyle] = useState("modern");
@@ -19,26 +18,26 @@ export default function ParamForm() {
 
   return (
     <form onSubmit={onSubmit} style={{ display: "grid", gap: "1rem" }}>
-      <label>风格
+      <label>{messages.style}
         <select value={style} onChange={(e) => setStyle(e.target.value)}>
           {STYLES.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </label>
-      <label>层数
+      <label>{messages.floors}
         <input type="number" min={1} max={6} value={floors} onChange={(e) => setFloors(+e.target.value)} />
       </label>
-      <label>面宽(m)
+      <label>{messages.width}
         <input type="number" min={6} max={20} value={widthM} onChange={(e) => setWidthM(+e.target.value)} />
       </label>
-      <label>进深(m)
+      <label>{messages.depth}
         <input type="number" min={5} max={18} value={depthM} onChange={(e) => setDepthM(+e.target.value)} />
       </label>
-      <label>材质
+      <label>{messages.material}
         <select value={material} onChange={(e) => setMaterial(e.target.value)}>
           {MATERIALS.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </label>
-      <button type="submit">生成方案</button>
+      <button type="submit">{messages.generate}</button>
     </form>
   );
 }
