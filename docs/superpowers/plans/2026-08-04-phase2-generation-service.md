@@ -298,19 +298,31 @@ def _window_row(floor_idx: int, floors: int, window_h: int) -> int:
     return 40 + floor_idx * (window_h + 60) + 10
 
 
+def _window_rows(floors: int, height_px: int, margin: int, scale: float) -> list[int]:
+    """按层数在画布高度内均分楼层,返回每层窗的 y 坐标(层内垂直居中)。
+
+    保证任意 floors(1-6)下窗口都不超出画布。
+    """
+    avail_h = height_px - 2 * margin
+    floor_h = avail_h // floors
+    window_h = max(20, floor_h - 24)
+    return [margin + f * floor_h + (floor_h - window_h) // 2 for f in range(floors)]
+
+
 def build_facade_spec(params: BuildingParams, width_px: int = 640, height_px: int = 480) -> FacadeSpec:
     scale = width_px / MAX_WIDTH_PX  # 相对默认面宽的比例
     palette = MATERIAL_COLORS[params.materials[0]]
     floors = params.floors
-    window_h = int(70 * scale)
+    margin = int(40 * scale)
     window_w = int(90 * scale)
     cols = _window_cols(width_px)
-    margin = int(40 * scale)
     gap = (width_px - 2 * margin - cols * window_w) // (cols - 1) if cols > 1 else 0
 
+    ys = _window_rows(floors, height_px, margin, scale)
+    window_h = (ys[1] - ys[0] - 10) if floors > 1 else max(20, (height_px - 2 * margin) - 60)
+
     windows: list[WindowRect] = []
-    for floor_idx in range(floors):
-        y = _window_row(floor_idx, floors, window_h)
+    for floor_idx, y in enumerate(ys):
         for c in range(cols):
             x = margin + c * (window_w + gap)
             windows.append(WindowRect(x=x, y=y, w=window_w, h=window_h))
@@ -732,7 +744,7 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
     x0, y0 = 30, 30
     x1 = spec.width_px - 30
     y1 = spec.height_px - 30
-    depth = 70
+    depth = 50  # 深度偏移 50*0.5=25px,保证顶面/侧壁不出画布(640×480)
     # 正立面(已投影,深度 0 时与立面一致)
     front = project_rect((x0, y0, x1 - x0, y1 - y0), depth=0)
     # 侧壁:右边界向纵深偏移,形成顶面/侧壁
@@ -1337,4 +1349,4 @@ git commit -m "docs: 记录阶段 2 冒烟验证结果"
 - `GenerationResponse.images` 为 `list[str]`,API 从 artifact 的 `img.url` 提取——契约一致
 - 前端 `ResultImages` 通过 `url.includes("facade")` 分类,与后端文件名约定一致
 
-**确定性说明:** 所有绘图由 `BuildingParams` 唯一决定(无随机),测试可复现。透视深度固定 70px、画布固定 640×480/480×360,输出确定。
+**确定性说明:** 所有绘图由 `BuildingParams` 唯一决定(无随机),测试可复现。透视深度固定 50px、画布固定 640×480/480×360,输出确定。
