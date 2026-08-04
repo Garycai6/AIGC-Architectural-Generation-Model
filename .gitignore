@@ -24,6 +24,9 @@ checkpoints/
 *.safetensors
 *.bin
 
+# 生成产物缓存
+.cache/
+
 # 测试与工具
 .pytest_cache/
 .ruff_cache/
