@@ -934,6 +934,8 @@ Expected: FAIL,`ImportError: cannot import name 'SimulatorGenerator' from 'gener
 # generation/generators/simulator/__init__.py
 """本地模拟器生成器——护城河:参数 → 程序化线稿。"""
 
+from pathlib import Path
+
 from generation.generators.base import GenerationArtifact
 from generation.generators.simulator.renderer import render_scheme
 from generation.params.model import BuildingParams
@@ -946,7 +948,7 @@ class SimulatorGenerator:
         self,
         params: BuildingParams,
         scheme_id: str,
-        out_dir: object,
+        out_dir: Path,
         lang: str = "zh",
     ) -> GenerationArtifact:
         return await render_scheme(params, scheme_id, out_dir, lang)
