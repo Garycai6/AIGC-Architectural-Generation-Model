@@ -514,13 +514,15 @@ def test_floorplan_outer_rect_within_canvas():
 def test_floorplan_rooms_zh():
     spec = build_floorplan_spec(_params(), lang="zh")
     texts = [r.text for r in spec.rooms]
-    assert any(t in ROOM_NAMES_ZH for t in texts)
+    assert texts  # 至少一个房间
+    assert all(t in ROOM_NAMES_ZH for t in texts)
 
 
 def test_floorplan_rooms_en():
     spec = build_floorplan_spec(_params(), lang="en")
     texts = [r.text for r in spec.rooms]
-    assert any(t in ROOM_NAMES_EN for t in texts)
+    assert texts  # 至少一个房间
+    assert all(t in ROOM_NAMES_EN for t in texts)
 
 
 def test_floorplan_room_count_scales_with_width():
