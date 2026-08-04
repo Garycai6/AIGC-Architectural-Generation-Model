@@ -149,3 +149,13 @@ def test_european_arch_window():
     assert european.windows[0].arch is True
     modern = build_facade_spec(_params(style="modern"))
     assert modern.windows[0].arch is False
+
+
+def test_all_styles_windows_within_canvas():
+    """回归:任一风格 × 任一层数,窗口都不超出画布。"""
+    for style in ("modern", "neoclassic", "european", "nordic"):
+        for floors in (1, 3, 6):
+            spec = build_facade_spec(_params(style=style, floors=floors))
+            for w in spec.windows:
+                assert 0 <= w.x and w.x + w.w <= spec.width_px
+                assert 0 <= w.y and w.y + w.h <= spec.height_px

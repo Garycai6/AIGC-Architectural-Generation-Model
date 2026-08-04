@@ -197,10 +197,12 @@ def build_facade_spec(
     margin = int(40 * (width_px / MAX_WIDTH_PX))
     ratio = style.window_ratio
     window_w = int(90 * (width_px / MAX_WIDTH_PX))
-    window_h = int(window_w * ratio[1] / ratio[0])
+    # 窗高:风格 ratio 推导,但不超过楼层可用高(保证任意 floors 不越画布)
+    ys, row_h = _window_rows(floors, height_px, margin)
+    style_h = int(window_w * ratio[1] / ratio[0])
+    window_h = max(20, min(style_h, row_h))
     cols = _window_cols(params.width_m)
     gap = (width_px - 2 * margin - cols * window_w) // (cols - 1) if cols > 1 else 0
-    ys, _ = _window_rows(floors, height_px, margin)
     windows: list[WindowRect] = []
     for y in ys:
         for c in range(cols):
