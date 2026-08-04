@@ -1,5 +1,9 @@
 from generation.generators.simulator.facade import (
     MATERIAL_COLORS,
+    CorniceSpec,
+    RoofGeometry,
+    StyleConfig,
+    _roof_geom,
     build_facade_spec,
 )
 from generation.params.model import BuildingParams
@@ -67,3 +71,34 @@ def test_windows_within_canvas_floors6():
     for w in spec.windows:
         assert 0 <= w.x and w.x + w.w <= spec.width_px
         assert 0 <= w.y and w.y + w.h <= spec.height_px
+
+
+def test_facade_spec_has_visual_fields():
+    spec = build_facade_spec(_params(roof="flat"))
+    # 升级后的字段存在
+    assert spec.style == "modern"
+    assert isinstance(spec.roof_geom, RoofGeometry)
+    assert spec.roof_geom.kind == "flat"
+    assert isinstance(spec.cornice, CorniceSpec)
+    # 兼容:roof 字段保留
+    assert spec.roof == "flat"
+
+
+def test_roof_geom_kinds():
+    flat = _roof_geom(_params(roof="flat"))
+    pitched = _roof_geom(_params(roof="pitched"))
+    hipped = _roof_geom(_params(roof="hipped"))
+    assert flat.kind == "flat"
+    assert flat.ridge_y is None
+    assert pitched.kind == "pitched"
+    assert pitched.ridge_y is not None
+    assert hipped.kind == "hipped"
+    assert hipped.ridge_y is not None
+
+
+def test_style_config_abstract():
+    # StyleConfig 是抽象基类,不能直接实例化
+    import pytest
+
+    with pytest.raises(TypeError):
+        StyleConfig()

@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Literal
 
 from pydantic import BaseModel
@@ -11,18 +12,45 @@ MAX_WIDTH_PX = 640
 MAX_HEIGHT_PX = 480
 
 
+class MaterialPalette(BaseModel):
+    main: str
+    accent: str
+    trim: str
+
+
 class WindowRect(BaseModel):
     x: int
     y: int
     w: int
     h: int
     cross: bool = True
+    arch: bool = False
 
 
-class MaterialPalette(BaseModel):
-    main: str
-    accent: str
-    trim: str
+class RoofGeometry(BaseModel):
+    kind: Literal["flat", "pitched", "hipped"]
+    ridge_y: int | None = None
+    has_eaves: bool = True
+
+
+class CorniceSpec(BaseModel):
+    has: bool
+    thickness: int = 4
+    y: int | None = None
+
+
+class StyleConfig(ABC):
+    window_ratio: tuple[float, float] = (1.0, 1.0)
+    window_arch: bool = False
+
+    @abstractmethod
+    def cornice(self, width_px: int) -> CorniceSpec: ...
+
+    @abstractmethod
+    def apply_palette(self, mat: MaterialPalette) -> MaterialPalette: ...
+
+    @abstractmethod
+    def build_roof_geom(self, params: BuildingParams) -> RoofGeometry: ...
 
 
 MATERIAL_COLORS: dict[str, MaterialPalette] = {
@@ -39,7 +67,18 @@ class FacadeSpec(BaseModel):
     floors: int
     windows: list[WindowRect]
     roof: Literal["flat", "pitched", "hipped"]
+    style: str
+    roof_geom: RoofGeometry
+    cornice: CorniceSpec
     palette: MaterialPalette
+
+
+def _roof_geom(params: BuildingParams) -> RoofGeometry:
+    if params.roof == "flat":
+        return RoofGeometry(kind="flat", ridge_y=None)
+    if params.roof == "pitched":
+        return RoofGeometry(kind="pitched", ridge_y=20)
+    return RoofGeometry(kind="hipped", ridge_y=30)
 
 
 def _window_cols(width_m: float) -> int:
@@ -84,5 +123,8 @@ def build_facade_spec(
         floors=floors,
         windows=windows,
         roof=params.roof,
+        style=params.style,
+        roof_geom=_roof_geom(params),
+        cornice=CorniceSpec(has=False, thickness=0, y=None),
         palette=palette,
     )
