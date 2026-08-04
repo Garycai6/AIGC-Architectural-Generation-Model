@@ -1,1 +1,2 @@
-{ "app_title": "ArchGen 建筑方案生成", "style": "风格", "floors": "层数", "width": "面宽(m)", "depth": "进深(m)", "material": "材质", "generate": "生成方案" }
+{ "app_title": "ArchGen 建筑方案生成", "style": "风格", "floors": "层数", "width": "面宽(m)", "depth": "进深(m)", "material": "材质", "generate": "生成方案",
+  "facade_label": "效果图", "floorplan_label": "平面图", "generating": "生成中…", "error": "生成失败,请重试" }
