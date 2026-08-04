@@ -59,6 +59,50 @@ def _draw_facade_rect(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
             )
 
 
+def _draw_roof(draw: ImageDraw.ImageDraw, spec: FacadeSpec, front, back) -> None:
+    x0 = front[0].x
+    x1 = front[1].x
+    y_top = front[0].y
+    roof = spec.roof_geom
+    if roof.kind == "flat":
+        # 平顶:顶面 + 檐口挑檐线(顶部描边)
+        draw.polygon(
+            [(front[0].x, front[0].y), (front[1].x, front[1].y),
+             (back[1].x, back[1].y), (back[0].x, back[0].y)],
+            fill=spec.palette.accent, outline=spec.palette.trim, width=3,
+        )
+    elif roof.kind == "pitched":
+        ridge = roof.ridge_y or (y_top - 40)
+        cx = (x0 + x1) / 2
+        # 前景山墙三角:顶边两角 → 屋脊顶点
+        draw.polygon(
+            [(x0, y_top), (x1, y_top), (cx, ridge)],
+            fill=spec.palette.accent, outline=spec.palette.trim, width=2,
+        )
+        # 坡面:顶边 → 屋脊(斜向纵深)
+        back_ridge = ((back[0].x + back[1].x) / 2, ridge)
+        draw.polygon(
+            [(x0, y_top), (cx, ridge), back_ridge, (back[0].x, back[0].y)],
+            fill=spec.palette.main, outline=spec.palette.trim, width=1,
+        )
+        # 屋脊线
+        draw.line([cx, ridge, back_ridge[0], back_ridge[1]], fill=spec.palette.trim, width=3)
+    elif roof.kind == "hipped":
+        ridge = roof.ridge_y or (y_top - 30)
+        cx = (x0 + x1) / 2
+        back_cx = (back[0].x + back[1].x) / 2
+        # 四坡:顶面梯形(前后边缩短到屋脊)
+        draw.polygon(
+            [(cx, ridge), (back_cx, ridge), (back[1].x, back[1].y), (x1, y_top)],
+            fill=spec.palette.main, outline=spec.palette.trim, width=2,
+        )
+        draw.polygon(
+            [(x0, y_top), (cx, ridge), (back_cx, ridge), (back[0].x, back[0].y)],
+            fill=spec.palette.accent, outline=spec.palette.trim, width=1,
+        )
+        draw.line([cx, ridge, back_cx, ridge], fill=spec.palette.trim, width=3)
+
+
 def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
     """绘制 3/4 透视:正立面投影 + 侧壁与顶面的体量感。"""
     x0, y0 = 30, 30
@@ -71,17 +115,8 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
     back = project_rect((x0, y0, x1 - x0, y1 - y0), depth=depth)
     pts_front = [(p.x, p.y) for p in front]
     draw.polygon(pts_front, fill=spec.palette.main, outline=spec.palette.trim)
-    # 顶面:正立面顶边 → 侧壁顶边
-    draw.polygon(
-        [
-            (front[0].x, front[0].y),
-            (front[1].x, front[1].y),
-            (back[1].x, back[1].y),
-            (back[0].x, back[0].y),
-        ],
-        fill=spec.palette.accent,
-        outline=spec.palette.trim,
-    )
+    # 屋顶(按 RoofGeometry.kind 绘制:flat/pitched/hipped)
+    _draw_roof(draw, spec, front, back)
     # 侧壁(右):正立面右边 → 侧壁右边
     draw.polygon(
         [

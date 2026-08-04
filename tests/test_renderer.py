@@ -72,3 +72,22 @@ async def test_render_scheme_respects_lang(tmp_path: Path):
     art_en = await renderer.render_scheme(params, "b", tmp_path, "en")
     assert len(art_zh.images) == 2
     assert len(art_en.images) == 2
+
+
+def test_render_roof_kinds_produce_different_png(tmp_path: Path):
+    from generation.generators.simulator.facade import build_facade_spec
+
+    files = {}
+    for roof in ("flat", "pitched", "hipped"):
+        spec = build_facade_spec(_params(roof=roof))
+        out = tmp_path / f"{roof}.png"
+        renderer._render_facade_png(spec, out)
+        files[roof] = out
+        assert out.exists()
+        assert out.stat().st_size > 0
+    # 三种屋顶 PNG 不应完全相同(视觉差异化生效)
+    flat_bytes = files["flat"].read_bytes()
+    pitched_bytes = files["pitched"].read_bytes()
+    hipped_bytes = files["hipped"].read_bytes()
+    assert flat_bytes != pitched_bytes
+    assert pitched_bytes != hipped_bytes
