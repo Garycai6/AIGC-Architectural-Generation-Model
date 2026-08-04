@@ -57,7 +57,18 @@ async def test_render_scheme_returns_artifact(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_render_scheme_respects_lang(tmp_path: Path):
-    art_zh = await renderer.render_scheme(_params(), "a", tmp_path, "zh")
-    art_en = await renderer.render_scheme(_params(), "b", tmp_path, "en")
+    # 验证 lang 参数真实影响平面图房间标签语言
+    from generation.generators.simulator.floorplan import build_floorplan_spec
+
+    params = _params()
+    spec_zh = build_floorplan_spec(params, lang="zh")
+    spec_en = build_floorplan_spec(params, lang="en")
+    assert spec_zh.rooms[0].text in {"厨房", "卧室", "客厅", "卫生间"}
+    assert spec_en.rooms[0].text in {"Kitchen", "Bedroom", "Living", "Bath"}
+    assert {r.text for r in spec_zh.rooms} != {r.text for r in spec_en.rooms}
+
+    # render_scheme 接受两种 lang 不崩溃,产物完整
+    art_zh = await renderer.render_scheme(params, "a", tmp_path, "zh")
+    art_en = await renderer.render_scheme(params, "b", tmp_path, "en")
     assert len(art_zh.images) == 2
     assert len(art_en.images) == 2

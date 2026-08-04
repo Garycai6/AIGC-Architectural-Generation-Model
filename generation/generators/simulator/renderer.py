@@ -19,7 +19,11 @@ FLOORPLAN_OUTPUT_PX = (480, 360)
 
 
 def _draw_facade_rect(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
-    """在画布上绘制正立面:体量轮廓、分层线、开窗网格。"""
+    """在画布上绘制正立面:体量轮廓、分层线、开窗网格。
+
+    保留供 future「正面视角(front view-angle)」渲染路径使用;当前
+    _render_facade_png 走 _draw_facade_perspective(3/4 透视)。
+    """
     x0, y0 = 30, 30
     x1 = spec.width_px - 30
     y1 = spec.height_px - 30
@@ -89,7 +93,8 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
         fill=spec.palette.main,
         outline=spec.palette.trim,
     )
-    # 窗在正立面(投影深度 0)
+    # 窗在正立面(投影深度 0;project_iso depth=0 为恒等变换,
+    # 故下方交叉线可用未投影坐标,与 project_rect 输出一致)
     for w in spec.windows:
         wp = project_rect((w.x + x0, w.y + y0, w.w, w.h), depth=0)
         draw.polygon(
