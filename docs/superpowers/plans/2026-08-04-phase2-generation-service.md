@@ -103,6 +103,7 @@ Expected: FAIL,`ModuleNotFoundError: No module named 'generation.generators'`
 
 ```python
 # generation/generators/base.py
+from pathlib import Path
 from typing import Literal, Protocol
 
 from pydantic import BaseModel
@@ -127,7 +128,7 @@ class Generator(Protocol):
         self,
         params: BuildingParams,
         scheme_id: str,
-        out_dir: object,
+        out_dir: Path,
         lang: Literal["en", "zh"] = "zh",
     ) -> GenerationArtifact: ...
 ```
@@ -728,6 +729,7 @@ Expected: FAIL,`ModuleNotFoundError: No module named 'generation.generators.simu
 ```python
 # generation/generators/simulator/renderer.py
 import asyncio
+from pathlib import Path
 from typing import Literal
 
 from PIL import Image, ImageDraw
@@ -805,14 +807,14 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
             draw.line([w.x + x0, cy, w.x + w.w + x0, cy], fill=spec.palette.trim, width=1)
 
 
-def _render_facade_png(spec: FacadeSpec, out_path: object) -> None:
+def _render_facade_png(spec: FacadeSpec, out_path: Path) -> None:
     img = Image.new("RGB", FACADE_OUTPUT_PX, "#ffffff")
     draw = ImageDraw.Draw(img)
     _draw_facade_perspective(draw, spec)
     img.save(str(out_path))
 
 
-def _render_floorplan_png(spec: FloorplanSpec, out_path: object) -> None:
+def _render_floorplan_png(spec: FloorplanSpec, out_path: Path) -> None:
     img = Image.new("RGB", FLOORPLAN_OUTPUT_PX, "#ffffff")
     draw = ImageDraw.Draw(img)
     x, y, w, h = spec.outer
@@ -826,10 +828,8 @@ def _render_floorplan_png(spec: FloorplanSpec, out_path: object) -> None:
     img.save(str(out_path))
 
 
-def _render_sync(params: BuildingParams, scheme_id: str, out_dir: object, lang: str) -> GenerationArtifact:
-    import pathlib
-
-    out = pathlib.Path(out_dir)
+def _render_sync(params: BuildingParams, scheme_id: str, out_dir: Path, lang: str) -> GenerationArtifact:
+    out = out_dir
     facade = build_facade_spec(params)
     _render_facade_png(facade, out / FACADE_FILE)
     floorplan = build_floorplan_spec(params, lang=lang)
@@ -1014,9 +1014,28 @@ git commit -m "feat: 组装 SimulatorGenerator(实现 Generator 协议)"
 - [ ] **Step 1: 更新 API 测试**
 
 ```python
-# tests/test_api.py 中修改 test_generate_skeleton 为:
+# tests/test_api.py 中修改 _make_app 与 test_generate_skeleton:
+import tempfile
+
+from fastapi.testclient import TestClient
+
+from backend.app.core.config import Settings
+from backend.app.main import create_app
+
+
+def _make_app(cache_dir: str | None = None):
+    # 显式传参,避免从 .env / 环境变量读取,保证测试确定性
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="replicate",
+        max_free_quota=5,
+        cache_dir=cache_dir or tempfile.mkdtemp(),
+    )
+    return create_app(settings)
+
+
 def test_generate_skeleton(tmp_path):
-    from backend.app.core.config import Settings
     settings = Settings(
         deepseek_api_key="",
         deepseek_base_url="https://api.deepseek.com",
@@ -1051,6 +1070,8 @@ def test_generate_skeleton(tmp_path):
         assert img_resp.status_code == 200
         assert img_resp.headers["content-type"] == "image/png"
 ```
+
+> **注:** `_make_app()` 默认用 `tempfile.mkdtemp()` 作为 cache_dir,避免 test_health / test_generate_invalid_params 在项目根目录留下 `.cache/archgen` 目录(测试隔离)。
 
 - [ ] **Step 2: 运行测试验证失败**
 

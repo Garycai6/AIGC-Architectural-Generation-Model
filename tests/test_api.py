@@ -1,16 +1,19 @@
+import tempfile
+
 from fastapi.testclient import TestClient
 
 from backend.app.core.config import Settings
 from backend.app.main import create_app
 
 
-def _make_app():
+def _make_app(cache_dir: str | None = None):
     # 显式传参,避免从 .env / 环境变量读取,保证测试确定性
     settings = Settings(
         deepseek_api_key="",
         deepseek_base_url="https://api.deepseek.com",
         image_provider="replicate",
         max_free_quota=5,
+        cache_dir=cache_dir or tempfile.mkdtemp(),
     )
     return create_app(settings)
 
