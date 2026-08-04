@@ -67,9 +67,15 @@ def _draw_roof(draw: ImageDraw.ImageDraw, spec: FacadeSpec, front, back) -> None
     if roof.kind == "flat":
         # 平顶:顶面 + 檐口挑檐线(顶部描边)
         draw.polygon(
-            [(front[0].x, front[0].y), (front[1].x, front[1].y),
-             (back[1].x, back[1].y), (back[0].x, back[0].y)],
-            fill=spec.palette.accent, outline=spec.palette.trim, width=3,
+            [
+                (front[0].x, front[0].y),
+                (front[1].x, front[1].y),
+                (back[1].x, back[1].y),
+                (back[0].x, back[0].y),
+            ],
+            fill=spec.palette.accent,
+            outline=spec.palette.trim,
+            width=3,
         )
     elif roof.kind == "pitched":
         ridge = roof.ridge_y or (y_top - 40)
@@ -77,13 +83,17 @@ def _draw_roof(draw: ImageDraw.ImageDraw, spec: FacadeSpec, front, back) -> None
         # 前景山墙三角:顶边两角 → 屋脊顶点
         draw.polygon(
             [(x0, y_top), (x1, y_top), (cx, ridge)],
-            fill=spec.palette.accent, outline=spec.palette.trim, width=2,
+            fill=spec.palette.accent,
+            outline=spec.palette.trim,
+            width=2,
         )
         # 坡面:顶边 → 屋脊(斜向纵深)
         back_ridge = ((back[0].x + back[1].x) / 2, ridge)
         draw.polygon(
             [(x0, y_top), (cx, ridge), back_ridge, (back[0].x, back[0].y)],
-            fill=spec.palette.main, outline=spec.palette.trim, width=1,
+            fill=spec.palette.main,
+            outline=spec.palette.trim,
+            width=1,
         )
         # 屋脊线
         draw.line([cx, ridge, back_ridge[0], back_ridge[1]], fill=spec.palette.trim, width=3)
@@ -94,11 +104,15 @@ def _draw_roof(draw: ImageDraw.ImageDraw, spec: FacadeSpec, front, back) -> None
         # 四坡:顶面梯形(前后边缩短到屋脊)
         draw.polygon(
             [(cx, ridge), (back_cx, ridge), (back[1].x, back[1].y), (x1, y_top)],
-            fill=spec.palette.main, outline=spec.palette.trim, width=2,
+            fill=spec.palette.main,
+            outline=spec.palette.trim,
+            width=2,
         )
         draw.polygon(
             [(x0, y_top), (cx, ridge), (back_cx, ridge), (back[0].x, back[0].y)],
-            fill=spec.palette.accent, outline=spec.palette.trim, width=1,
+            fill=spec.palette.accent,
+            outline=spec.palette.trim,
+            width=1,
         )
         draw.line([cx, ridge, back_cx, ridge], fill=spec.palette.trim, width=3)
 
@@ -112,14 +126,16 @@ def _draw_cornice(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> None:
     cy = (c.y or 0) + y0
     draw.rectangle(
         [x0, cy, x1, cy + c.thickness],
-        fill=spec.palette.trim, outline=spec.palette.trim,
+        fill=spec.palette.trim,
+        outline=spec.palette.trim,
     )
     # 山花三角楣:仅 pediment=True 的风格(neoclassic/european)画
     if c.pediment:
         pediment_h = max(10, c.thickness * 2)
         draw.polygon(
             [(x0, cy), (x1, cy), ((x0 + x1) / 2, cy - pediment_h)],
-            outline=spec.palette.trim, fill=spec.palette.accent,
+            outline=spec.palette.trim,
+            fill=spec.palette.accent,
         )
 
 
@@ -164,7 +180,8 @@ def _draw_facade_perspective(draw: ImageDraw.ImageDraw, spec: FacadeSpec) -> Non
             )
             draw.pieslice(
                 [wx, wy, wx + ww, wy + wh],
-                180, 360,
+                180,
+                360,
                 fill=spec.palette.accent,
                 outline=spec.palette.trim,
                 width=2,
