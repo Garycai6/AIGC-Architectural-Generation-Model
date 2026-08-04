@@ -55,11 +55,15 @@ class GenerationArtifact(BaseModel):
 class Generator(Protocol):
     """生成器契约——模拟器与未来 API/真实模型共用,网页层零改动。"""
     async def generate(
-        self, params: BuildingParams, scheme_id: str, out_dir: Path
+        self,
+        params: BuildingParams,
+        scheme_id: str,
+        out_dir: Path,
+        lang: Literal["en", "zh"] = "zh",
     ) -> GenerationArtifact: ...
 ```
 
-- `SimulatorGenerator`(本阶段实现):在 `asyncio.to_thread` 中同步绘制,避免阻塞事件循环
+- `SimulatorGenerator`(本阶段实现):接收 `lang` 参数,在 `asyncio.to_thread` 中同步绘制,避免阻塞事件循环
 - 未来 `ApiGenerator`(Replicate/Fal):实现同一接口,异步调用远端
 - 渲染器是同步纯函数(Pillow),线程池执行;FastAPI 事件循环不被绘图阻塞
 
