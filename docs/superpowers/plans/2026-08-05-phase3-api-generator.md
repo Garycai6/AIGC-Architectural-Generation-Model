@@ -238,28 +238,24 @@ def _params(**overrides):
     return BuildingParams(**base)
 
 
-def _fake_output_file(tmp_path: Path, name: str) -> Path:
-    """创建一个真实存在的假输出文件,mock Replicate 返回其路径。"""
-    p = tmp_path / name
-    p.write_bytes(b"fake-png-bytes")
-    return p
+def _make_client(tmp_path: Path):
+    """构造带 mock .run 的 client,返回可复制的假输出文件路径。"""
+    out = tmp_path / "out.png"
+    out.write_bytes(b"fake-png-bytes")
+    client = MagicMock()
+    client.run.return_value = [str(out)]
+    return client, out
 
 
 @pytest.mark.asyncio
-@patch("generation.generators.api.replicate_gen.replicate.run")
-async def test_generate_returns_artifact(mock_run, tmp_path: Path):
-    # mock Replicate 返回真实存在的文件路径(urlretrieve 可复制)
-    out = _fake_output_file(tmp_path, "out.png")
-    mock_pred = MagicMock()
-    mock_pred.output = [str(out)]
-    mock_run.return_value = mock_pred
-
+async def test_generate_returns_artifact(tmp_path: Path):
+    client, out = _make_client(tmp_path)
     # mock urlretrieve:直接把源文件复制到目标路径
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
         side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
     ):
-        gen = ApiGenerator(replicate_client=MagicMock())
+        gen = ApiGenerator(replicate_client=client)
         art = await gen.generate(_params(), "sid-1", tmp_path, "zh")
 
     assert isinstance(art, GenerationArtifact)
@@ -274,31 +270,26 @@ async def test_generate_returns_artifact(mock_run, tmp_path: Path):
 
 
 @pytest.mark.asyncio
-@patch("generation.generators.api.replicate_gen.replicate.run")
-async def test_generate_calls_replicate_twice(mock_run, tmp_path: Path):
-    out = _fake_output_file(tmp_path, "out.png")
-    mock_pred = MagicMock()
-    mock_pred.output = [str(out)]
-    mock_run.return_value = mock_pred
-
+async def test_generate_calls_replicate_twice(tmp_path: Path):
+    client, out = _make_client(tmp_path)
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
         side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
     ):
-        gen = ApiGenerator(replicate_client=MagicMock())
+        gen = ApiGenerator(replicate_client=client)
         await gen.generate(_params(), "sid-2", tmp_path, "zh")
 
-    # 两次 SDXL 调用(facade + floorplan)
-    assert mock_run.call_count == 2
+    # 两次 SDXL 调用(facade + floorplan),走注入的 client
+    assert client.run.call_count == 2
 
 
 @pytest.mark.asyncio
 async def test_generate_without_client_raises(tmp_path: Path):
-    # 无 API key / client 时抛配置错误
+    # 无 API key / client 时,构造函数抛配置错误
     from generation.generators.api.replicate_gen import ApiGeneratorError
 
     with pytest.raises(ApiGeneratorError):
-        await ApiGenerator(replicate_client=None).generate(_params(), "s", tmp_path, "zh")
+        ApiGenerator(replicate_client=None)
 ```
 
 - [ ] **Step 2: 运行测试验证失败**
@@ -311,6 +302,7 @@ Expected: FAIL,`ModuleNotFoundError: No module named 'generation.generators.api.
 ```python
 # generation/generators/api/replicate_gen.py
 import asyncio
+import urllib.request
 from pathlib import Path
 
 import replicate
@@ -347,17 +339,16 @@ class ApiGenerator:
 
     def _call_sdxl(self, prompt: str, control_image: Path, out_path: Path) -> None:
         """同步调用 Replicate SDXL(在线程池中执行)。"""
-        output = self._client.run(
-            self._model,
-            input={
-                "prompt": prompt,
-                "negative_prompt": build_negative_prompt(),
-                "control_image": open(control_image, "rb"),
-            },
-        )
+        with open(control_image, "rb") as f:
+            output = self._client.run(
+                self._model,
+                input={
+                    "prompt": prompt,
+                    "negative_prompt": build_negative_prompt(),
+                    "control_image": f,
+                },
+            )
         # output 是文件 URL 列表;下载第一个保存到 out_path
-        import urllib.request
-
         file_url = output[0] if isinstance(output, list) else output
         urllib.request.urlretrieve(str(file_url), str(out_path))
 
@@ -411,7 +402,7 @@ from generation.generators.api.replicate_gen import ApiGenerator, ApiGeneratorEr
 __all__ = ["ApiGenerator", "ApiGeneratorError"]
 ```
 
-> **mock 说明:** 测试 patch `replicate.run` 并 mock `urllib.request.urlretrieve`(side_effect 直接复制源文件到目标),保证离线确定性。`replicate_gen.py` 内 `_call_sdxl` 的 `import urllib.request` 在函数体内——mock 需 patch 模块路径 `generation.generators.api.replicate_gen.urllib.request.urlretrieve`(函数内 import 后已绑定到模块命名空间)。测试保持「断言 artifact + 两次调用」的核心意图。
+> **mock 说明:** 测试通过注入 `replicate_client=MagicMock()`(其 `.run` 返回假文件路径)驱动 `self._client.run`,并 mock `urllib.request.urlretrieve`(side_effect 复制假文件),保证离线确定性且验证依赖注入。`replicate_gen.py` 模块顶部 `import urllib.request`,mock 路径为 `generation.generators.api.replicate_gen.urllib.request.urlretrieve`。测试保持「断言 artifact + 两次 client.run 调用」的核心意图。
 
 - [ ] **Step 4: 运行测试验证通过**
 
