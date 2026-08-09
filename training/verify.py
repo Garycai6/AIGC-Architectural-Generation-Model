@@ -33,19 +33,31 @@ def main(argv: list[str] | None = None) -> int:
 
     pipe = StableDiffusionXLPipeline.from_pretrained(
         "stabilityai/stable-diffusion-xl-base-1.0",
-        torch_dtype=torch.float16, variant="fp16", use_safetensors=True,
+        torch_dtype=torch.float16,
+        variant="fp16",
+        use_safetensors=True,
     )
     pipe.to("cuda")
     pipe.load_lora_weights(str(lora_path))
 
     prompt = make_prompt(
-        {"style": cfg.style, "floors": 2, "width_m": 10.0, "depth_m": 8.0,
-         "materials": ["brick"], "roof": "flat", "environment": "suburb"}
+        {
+            "style": cfg.style,
+            "floors": 2,
+            "width_m": 10.0,
+            "depth_m": 8.0,
+            "materials": ["brick"],
+            "roof": "flat",
+            "environment": "suburb",
+        }
     )
     out = cfg.output_dir / f"{cfg.style}_sample.png"
     image = pipe(
-        prompt=prompt, num_inference_steps=30, guidance_scale=7.5,
-        height=1024, width=1024,
+        prompt=prompt,
+        num_inference_steps=30,
+        guidance_scale=7.5,
+        height=1024,
+        width=1024,
     ).images[0]
     image.save(out)
     print(f"[verify] 样例图 → {out}")

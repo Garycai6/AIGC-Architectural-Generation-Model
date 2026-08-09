@@ -32,17 +32,17 @@ def _train_loop(cfg):
     from diffusers.optimization import get_scheduler
     from diffusers.utils import convert_state_dict_to_diffusers
     from peft import LoraConfig, get_peft_model
+    from PIL import Image
     from safetensors.torch import save_file
     from transformers import AutoTokenizer
-    from PIL import Image
 
     # 1. 加载 SDXL base(仅训练,省显存:不加载 VAE decode)
-    vae = AutoencoderKL.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0", subfolder="vae"
-    )
+    vae = AutoencoderKL.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", subfolder="vae")
     pipe = StableDiffusionXLPipeline.from_pretrained(
         "stabilityai/stable-diffusion-xl-base-1.0",
-        vae=vae, torch_dtype=torch.float16, variant="fp16",
+        vae=vae,
+        torch_dtype=torch.float16,
+        variant="fp16",
         use_safetensors=True,
     )
     pipe.to("cuda")
@@ -58,11 +58,18 @@ def _train_loop(cfg):
 
     # 2. 加 peft LoRA(unet)
     lora_config = LoraConfig(
-        r=16, lora_alpha=32, target_modules=[
-            "to_q", "to_k", "to_v", "to_out.0",
-            "ff.net.0.proj", "ff.net.2",
+        r=16,
+        lora_alpha=32,
+        target_modules=[
+            "to_q",
+            "to_k",
+            "to_v",
+            "to_out.0",
+            "ff.net.0.proj",
+            "ff.net.2",
         ],
-        lora_dropout=0.0, bias="none",
+        lora_dropout=0.0,
+        bias="none",
     )
     unet = get_peft_model(unet, lora_config)
 
@@ -75,60 +82,68 @@ def _train_loop(cfg):
     optimizer = torch.optim.AdamW(unet.parameters(), lr=cfg.learning_rate)
     steps = len(images) * cfg.epochs
     lr_scheduler = get_scheduler(
-        "constant", optimizer=optimizer, num_warmup_steps=0,
+        "constant",
+        optimizer=optimizer,
+        num_warmup_steps=0,
         num_training_steps=steps,
     )
 
     # 5. 训练循环(逐张样本训练,epochs 次)
     unet.train()
     noise_scheduler = pipe.scheduler
-    for epoch in range(cfg.epochs):
-        for img, prompt in zip(images, prompts):
-            pixel_values = torch.tensor(
-                [img.resize((cfg.resolution, cfg.resolution))],
-                dtype=torch.float32,
-            ).permute(0, 3, 1, 2) / 127.5 - 1.0
+    for _epoch in range(cfg.epochs):
+        for img, prompt in zip(images, prompts, strict=True):
+            pixel_values = (
+                torch.tensor(
+                    [img.resize((cfg.resolution, cfg.resolution))],
+                    dtype=torch.float32,
+                ).permute(0, 3, 1, 2)
+                / 127.5
+                - 1.0
+            )
             pixel_values = pixel_values.to(device="cuda", dtype=torch.float16)
 
             # 双 text encoder 编码 prompt
             text_inputs = tokenizer(
-                prompt, padding="max_length", max_length=77, truncation=True,
+                prompt,
+                padding="max_length",
+                max_length=77,
+                truncation=True,
                 return_tensors="pt",
             )
-            encoder_hidden_states = text_encoder(
-                text_inputs.input_ids.to("cuda")
-            )[0]
+            encoder_hidden_states = text_encoder(text_inputs.input_ids.to("cuda"))[0]
             text_inputs_2 = tokenizer(
-                prompt, padding="max_length", max_length=77, truncation=True,
+                prompt,
+                padding="max_length",
+                max_length=77,
+                truncation=True,
                 return_tensors="pt",
             )
-            encoder_hidden_states_2 = text_encoder_2(
-                text_inputs_2.input_ids.to("cuda")
-            )[0]
+            encoder_hidden_states_2 = text_encoder_2(text_inputs_2.input_ids.to("cuda"))[0]
 
             # 加噪声 + denoising objective
             noise = torch.randn_like(pixel_values)
             timesteps = torch.randint(
-                0, noise_scheduler.config.num_train_timesteps,
-                (1,), device="cuda",
+                0,
+                noise_scheduler.config.num_train_timesteps,
+                (1,),
+                device="cuda",
             ).long()
             noisy = noise_scheduler.add_noise(pixel_values, noise, timesteps)
             noise_pred = unet(
-                noisy, timesteps,
+                noisy,
+                timesteps,
                 encoder_hidden_states=encoder_hidden_states,
                 added_cond_kwargs={
                     "text_embeds": encoder_hidden_states_2,
                     "time_ids": torch.tensor(
-                        [[cfg.resolution, cfg.resolution, 0, 0,
-                          cfg.resolution, cfg.resolution]],
+                        [[cfg.resolution, cfg.resolution, 0, 0, cfg.resolution, cfg.resolution]],
                         device="cuda",
                     ),
                 },
             ).sample
 
-            loss = torch.nn.functional.mse_loss(
-                noise_pred.float(), noise.float(), reduction="mean"
-            )
+            loss = torch.nn.functional.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
             loss.backward()
             optimizer.step()
             lr_scheduler.step()
