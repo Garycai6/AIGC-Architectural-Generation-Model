@@ -59,6 +59,10 @@ def _train_loop(cfg):
     tokenizer_2 = AutoTokenizer.from_pretrained(model_id, subfolder="tokenizer_2", use_fast=False)
     text_encoder = pipe.text_encoder
     text_encoder_2 = pipe.text_encoder_2
+    text_encoder.eval()
+    text_encoder.requires_grad_(False)
+    text_encoder_2.eval()
+    text_encoder_2.requires_grad_(False)
     unet = pipe.unet
     unet.enable_gradient_checkpointing()
 
@@ -127,7 +131,9 @@ def _train_loop(cfg):
                 truncation=True,
                 return_tensors="pt",
             )
-            encoder_hidden_states_2 = text_encoder_2(text_inputs_2.input_ids.to("cuda"))[0]
+            encoder_hidden_states_2 = text_encoder_2(text_inputs_2.input_ids.to("cuda"))
+            pooled_text_embeds = encoder_hidden_states_2.pooler_output
+            encoder_hidden_states_2 = encoder_hidden_states_2.last_hidden_state
 
             # latent 上加噪 + denoising objective
             noise = torch.randn_like(latents)
@@ -138,15 +144,20 @@ def _train_loop(cfg):
                 device="cuda",
             ).long()
             noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+            # C1: SDXL UNet 期望 cross-attn 输入 dim=2048(CLIP 768 + OpenCLIP 1280)
+            encoder_hidden_states = torch.cat(
+                [encoder_hidden_states, encoder_hidden_states_2], dim=-1
+            )
             noise_pred = unet(
                 noisy_latents,
                 timesteps,
                 encoder_hidden_states=encoder_hidden_states,
                 added_cond_kwargs={
-                    "text_embeds": encoder_hidden_states_2,
+                    "text_embeds": pooled_text_embeds,
                     "time_ids": torch.tensor(
                         [[cfg.resolution, cfg.resolution, 0, 0, cfg.resolution, cfg.resolution]],
                         device="cuda",
+                        dtype=torch.float32,
                     ),
                 },
             ).sample
