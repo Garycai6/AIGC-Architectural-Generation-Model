@@ -22,3 +22,11 @@
 - 阶段3: ApiGenerator(SDXL+ControlNet)实现,线稿作条件图,双产出走真模型
 - 阶段3: mock 测试通过(路由切换 + ApiGenerator 两次调用),真调验证(跳过——REPLICATE_API_TOKEN 未配置)
 - 阶段3: 全量测试 56 passed,ruff 全绿
+
+# 阶段 3 真调验证记录 (2026-08-09, token 充值后)
+- 模型确认:`replicategithubwc/controlnet-sdxl`(model_type=canny),jagilley/controlnet-sdxl 已 404
+- 真调链路通:模拟器线稿 → ControlNet(Canny)→ 1024×1024 真图(facade 1.25MB / floorplan 809KB)
+- 关键修复:输出列表 `output[-1]` 才是真图,`output[0]` 是 Canny 边缘图(首次取错)
+- ApiGenerator.generate 完整流程验证通过(两次 SDXL 调用,需加大 client timeout 到 300s)
+- 已固化模型 ID 到 replicate_gen.py(版本哈希固定),测试 mock 反映真实输出结构
+

@@ -24,12 +24,18 @@ def _params(**overrides):
 
 
 def _make_client(tmp_path: Path):
-    """Build a client with mock .run returning a copyable fake output path."""
-    out = tmp_path / "out.png"
-    out.write_bytes(b"fake-png-bytes")
+    """Build a client with mock .run returning [edge-map, real-image] paths.
+
+    Mirrors the real controlnet-sdxl output: list where the LAST item is the
+    real generated image (earlier items are ControlNet edge maps).
+    """
+    edge = tmp_path / "edge.png"
+    edge.write_bytes(b"fake-edge")
+    real = tmp_path / "real.png"
+    real.write_bytes(b"fake-png-bytes")
     client = MagicMock()
-    client.run.return_value = [str(out)]
-    return client, out
+    client.run.return_value = [str(edge), str(real)]
+    return client, real
 
 
 @pytest.mark.asyncio
