@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { generateScheme } from "../../api/client";
-import { messages } from "../../i18n";
+import { useLang } from "../../contexts";
 
 const STYLES = ["modern", "neoclassic", "european", "nordic"];
 const MATERIALS = ["glass", "stone", "brick", "wood"];
@@ -11,6 +11,7 @@ interface ResultImages {
 }
 
 export default function ParamForm() {
+  const { lang, messages } = useLang();
   const [style, setStyle] = useState("modern");
   const [floors, setFloors] = useState(3);
   const [widthM, setWidthM] = useState(10);
@@ -35,7 +36,7 @@ export default function ParamForm() {
           roof: "flat",
           environment: "suburb",
         },
-        "zh"
+        lang
       );
       const facade = res.images.find((u) => u.includes("facade"));
       const floorplan = res.images.find((u) => u.includes("floorplan"));
