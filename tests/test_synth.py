@@ -47,6 +47,36 @@ def test_generate_dataset_metadata_schema(tmp_path: Path):
     assert len(ids) == len(set(ids))  # id 唯一
 
 
+def test_generate_dataset_cross_style_unique(tmp_path: Path):
+    """跨风格参数不得重复——修复采样器跨风格重复缺陷。"""
+    import collections
+
+    out = tmp_path / "ds"
+    generate_dataset(out, per_style=50, seed=42)
+    rows = [
+        json.loads(line)
+        for line in (out / "metadata.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    by_style: dict[str, list[str]] = collections.defaultdict(list)
+    for r in rows:
+        by_style[r["params"]["style"]].append(r["params"])
+    styles = list(by_style)
+    assert len(styles) == 4
+    for i in range(len(styles)):
+        for j in range(i + 1, len(styles)):
+            # 比较不含 style 字段的参数——修复跨风格抽样重复缺陷
+            def _strip_style(p: dict) -> dict:
+                d = dict(p)
+                d.pop("style", None)
+                return d
+
+            si_params = [json.dumps(_strip_style(p), sort_keys=True) for p in by_style[styles[i]]]
+            sj_params = [json.dumps(_strip_style(p), sort_keys=True) for p in by_style[styles[j]]]
+            assert set(si_params) != set(sj_params), (
+                f"styles {styles[i]} and {styles[j]} produce identical param sets"
+            )
+
+
 def test_generate_dataset_deterministic(tmp_path: Path):
     a = tmp_path / "a"
     b = tmp_path / "b"

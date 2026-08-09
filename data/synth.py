@@ -36,13 +36,13 @@ def generate_dataset(out_dir: Path, per_style: int = 50, seed: int = 42) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     images_dir = out_dir / "images"
     images_dir.mkdir(exist_ok=True)
-    rng = random.Random(seed)
     gen = SimulatorGenerator()
     records: list[dict] = []
     idx = 0
     for style in STYLE_NAMES:
+        style_rng = random.Random(f"{seed}:{style}")
         for _ in range(per_style):
-            params = _sample_params(rng, style)
+            params = _sample_params(style_rng, style)
             idx += 1
             record_id = f"synth_{idx:06d}"
             tmp = out_dir / f".tmp_{record_id}"
