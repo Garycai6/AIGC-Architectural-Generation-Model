@@ -85,4 +85,4 @@ def test_build_samples(tmp_path: Path):
     assert len(samples) == 2
     for s in samples:
         assert s["image"].exists()
-        assert "nordic" in s["prompt"]
+        assert "Nordic" in s["prompt"]

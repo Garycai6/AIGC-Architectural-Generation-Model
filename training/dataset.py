@@ -29,9 +29,9 @@ def filter_by_style(records: list[dict], style: str) -> list[dict]:
 
 
 def make_prompt(params_dict: dict, lang: str = "en") -> str:
-    """用现有 prompt 构建器构造 facade prompt(统一小写)。"""
+    """用现有 prompt 构建器构造 facade prompt。"""
     params = BuildingParams(**params_dict)
-    return build_prompt(params, "facade", lang).lower()
+    return build_prompt(params, "facade", lang)
 
 
 def build_samples(dataset_dir: Path, style: str, resolution: int = 1024) -> list[dict]:
