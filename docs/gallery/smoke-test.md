@@ -18,3 +18,7 @@
 - 非法参数(style=baroque)返回 422
 - 全量测试 45 passed;ruff check + format 全绿
 
+# 阶段 3 冒烟验证记录 (2026-08-09)
+- 阶段3: ApiGenerator(SDXL+ControlNet)实现,线稿作条件图,双产出走真模型
+- 阶段3: mock 测试通过(路由切换 + ApiGenerator 两次调用),真调验证(跳过——REPLICATE_API_TOKEN 未配置)
+- 阶段3: 全量测试 56 passed,ruff 全绿

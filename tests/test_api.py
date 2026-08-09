@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from backend.app.core.config import Settings
 from backend.app.main import create_app
+from generation.generators.base import GenerationArtifact, ImageRef
 
 
 def _make_app(cache_dir: str | None = None):
@@ -112,3 +113,47 @@ def test_generate_defaults_to_simulator(tmp_path):
     )
     assert resp.status_code == 200
     assert len(resp.json()["images"]) == 2
+
+
+def test_generate_uses_apigenerator_when_replicate(tmp_path):
+    from unittest.mock import AsyncMock, patch
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="replicate",
+        max_free_quota=5,
+        cache_dir=str(tmp_path),
+        replicate_api_token="test-token",
+    )
+    with patch("backend.app.api.generate.ApiGenerator") as mock_cls:
+        mock_gen = mock_cls.return_value
+        mock_gen.generate = AsyncMock(
+            return_value=GenerationArtifact(
+                scheme_id="s1",
+                images=[
+                    ImageRef(kind="facade", url="/images/s1/facade.png"),
+                    ImageRef(kind="floorplan", url="/images/s1/floorplan.png"),
+                ],
+            )
+        )
+        client = TestClient(create_app(settings))
+        resp = client.post(
+            "/api/v1/generate",
+            json={
+                "params": {
+                    "style": "modern",
+                    "floors": 3,
+                    "width_m": 10.0,
+                    "depth_m": 8.0,
+                    "materials": ["glass"],
+                    "roof": "flat",
+                    "environment": "suburb",
+                },
+                "lang": "zh",
+            },
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert len(body["images"]) == 2
+        mock_cls.assert_called_once()
