@@ -238,23 +238,36 @@ def _params(**overrides):
     return BuildingParams(**base)
 
 
+def _fake_output_file(tmp_path: Path, name: str) -> Path:
+    """创建一个真实存在的假输出文件,mock Replicate 返回其路径。"""
+    p = tmp_path / name
+    p.write_bytes(b"fake-png-bytes")
+    return p
+
+
 @pytest.mark.asyncio
 @patch("generation.generators.api.replicate_gen.replicate.run")
 async def test_generate_returns_artifact(mock_run, tmp_path: Path):
-    # mock Replicate 返回一个预测,输出是文件列表
+    # mock Replicate 返回真实存在的文件路径(urlretrieve 可复制)
+    out = _fake_output_file(tmp_path, "out.png")
     mock_pred = MagicMock()
-    mock_pred.output = [str(tmp_path / "out.png")]
+    mock_pred.output = [str(out)]
     mock_run.return_value = mock_pred
 
-    gen = ApiGenerator(replicate_client=MagicMock())
-    art = await gen.generate(_params(), "sid-1", tmp_path, "zh")
+    # mock urlretrieve:直接把源文件复制到目标路径
+    with patch(
+        "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = ApiGenerator(replicate_client=MagicMock())
+        art = await gen.generate(_params(), "sid-1", tmp_path, "zh")
 
     assert isinstance(art, GenerationArtifact)
     assert art.scheme_id == "sid-1"
     assert len(art.images) == 2
     kinds = {img.kind for img in art.images}
     assert kinds == {"facade", "floorplan"}
-    # mock 模式下,真图输出由 mock 决定;此处验证落盘文件存在
+    # 真图文件存在(由 mock urlretrieve 复制而来)
     for img in art.images:
         path = tmp_path / img.url.rsplit("/", 1)[-1]
         assert path.exists()
@@ -263,12 +276,17 @@ async def test_generate_returns_artifact(mock_run, tmp_path: Path):
 @pytest.mark.asyncio
 @patch("generation.generators.api.replicate_gen.replicate.run")
 async def test_generate_calls_replicate_twice(mock_run, tmp_path: Path):
+    out = _fake_output_file(tmp_path, "out.png")
     mock_pred = MagicMock()
-    mock_pred.output = [str(tmp_path / "out.png")]
+    mock_pred.output = [str(out)]
     mock_run.return_value = mock_pred
 
-    gen = ApiGenerator(replicate_client=MagicMock())
-    await gen.generate(_params(), "sid-2", tmp_path, "zh")
+    with patch(
+        "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = ApiGenerator(replicate_client=MagicMock())
+        await gen.generate(_params(), "sid-2", tmp_path, "zh")
 
     # 两次 SDXL 调用(facade + floorplan)
     assert mock_run.call_count == 2
@@ -393,7 +411,7 @@ from generation.generators.api.replicate_gen import ApiGenerator, ApiGeneratorEr
 __all__ = ["ApiGenerator", "ApiGeneratorError"]
 ```
 
-> **mock 说明:** 测试 patch `replicate.run`,断言调用次数与 artifact 结构。mock 模式不真调 API,`_call_sdxl` 的 `urlretrieve` 会尝试下载 mock 返回的 URL——测试中 mock 返回的 `tmp_path/"out.png"` 若不存在会失败。**实现时确保测试的 mock 返回可下载内容**:测试里 mock `urlretrieve` 或让 mock 返回已存在的文件 URL。实施者可微调测试以配合 mock 行为,但必须保持「断言 artifact + 两次调用」的核心意图。
+> **mock 说明:** 测试 patch `replicate.run` 并 mock `urllib.request.urlretrieve`(side_effect 直接复制源文件到目标),保证离线确定性。`replicate_gen.py` 内 `_call_sdxl` 的 `import urllib.request` 在函数体内——mock 需 patch 模块路径 `generation.generators.api.replicate_gen.urllib.request.urlretrieve`(函数内 import 后已绑定到模块命名空间)。测试保持「断言 artifact + 两次调用」的核心意图。
 
 - [ ] **Step 4: 运行测试验证通过**
 
@@ -480,7 +498,7 @@ Expected: 新增测试 PASS(模拟器路径本来就走通)。
 import pathlib
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from backend.app.core.config import Settings
 from backend.app.schemas.generate import GenerateRequest, GenerationResponse
