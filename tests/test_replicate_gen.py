@@ -23,26 +23,24 @@ def _params(**overrides):
     return BuildingParams(**base)
 
 
-def _fake_output_file(tmp_path: Path, name: str) -> Path:
-    """Create a real fake output file so mock Replicate returns a valid path."""
-    p = tmp_path / name
-    p.write_bytes(b"fake-png-bytes")
-    return p
+def _make_client(tmp_path: Path):
+    """Build a client with mock .run returning a copyable fake output path."""
+    out = tmp_path / "out.png"
+    out.write_bytes(b"fake-png-bytes")
+    client = MagicMock()
+    client.run.return_value = [str(out)]
+    return client, out
 
 
 @pytest.mark.asyncio
-@patch("generation.generators.api.replicate_gen.replicate.run")
-async def test_generate_returns_artifact(mock_run, tmp_path: Path):
-    # mock Replicate returns a real file path (urlretrieve can copy)
-    out = _fake_output_file(tmp_path, "out.png")
-    mock_run.return_value = [str(out)]
-
+async def test_generate_returns_artifact(tmp_path: Path):
+    client, out = _make_client(tmp_path)
     # mock urlretrieve: copy source file directly to destination
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
         side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
     ):
-        gen = ApiGenerator(replicate_client=MagicMock())
+        gen = ApiGenerator(replicate_client=client)
         art = await gen.generate(_params(), "sid-1", tmp_path, "zh")
 
     assert isinstance(art, GenerationArtifact)
@@ -57,26 +55,23 @@ async def test_generate_returns_artifact(mock_run, tmp_path: Path):
 
 
 @pytest.mark.asyncio
-@patch("generation.generators.api.replicate_gen.replicate.run")
-async def test_generate_calls_replicate_twice(mock_run, tmp_path: Path):
-    out = _fake_output_file(tmp_path, "out.png")
-    mock_run.return_value = [str(out)]
-
+async def test_generate_calls_replicate_twice(tmp_path: Path):
+    client, out = _make_client(tmp_path)
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
         side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
     ):
-        gen = ApiGenerator(replicate_client=MagicMock())
+        gen = ApiGenerator(replicate_client=client)
         await gen.generate(_params(), "sid-2", tmp_path, "zh")
 
-    # two SDXL calls (facade + floorplan)
-    assert mock_run.call_count == 2
+    # two SDXL calls (facade + floorplan), through the injected client
+    assert client.run.call_count == 2
 
 
 @pytest.mark.asyncio
 async def test_generate_without_client_raises(tmp_path: Path):
-    # no API key / client -> configuration error
+    # no API key / client -> constructor raises configuration error
     from generation.generators.api.replicate_gen import ApiGeneratorError
 
     with pytest.raises(ApiGeneratorError):
-        await ApiGenerator(replicate_client=None).generate(_params(), "s", tmp_path, "zh")
+        ApiGenerator(replicate_client=None)

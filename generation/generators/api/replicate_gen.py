@@ -2,8 +2,6 @@ import asyncio
 import urllib.request
 from pathlib import Path
 
-import replicate
-
 from generation.generators.api.prompt import build_negative_prompt, build_prompt
 from generation.generators.base import GenerationArtifact, ImageRef
 from generation.generators.simulator.renderer import render_scheme
@@ -40,7 +38,7 @@ class ApiGenerator:
     def _call_sdxl(self, prompt: str, control_image: Path, out_path: Path) -> None:
         """Synchronous Replicate SDXL call (runs in thread pool)."""
         with open(control_image, "rb") as f:
-            output = replicate.run(
+            output = self._client.run(
                 self._model,
                 input={
                     "prompt": prompt,
