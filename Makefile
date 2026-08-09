@@ -1,4 +1,4 @@
-.PHONY: setup test lint run-frontend run-backend data-synth data-clean data-validate
+.PHONY: setup test lint run-frontend run-backend data-synth data-clean data-validate train-lora
 
 setup:
 	uv sync --extra dev
@@ -25,3 +25,6 @@ data-clean:
 
 data-validate:
 	uv run python -m data.validate --dir data/datasets/synth_demo
+
+train-lora:
+	uv run python -m training train --dataset-dir data/datasets/synth_demo --style modern --output-dir lora_out
