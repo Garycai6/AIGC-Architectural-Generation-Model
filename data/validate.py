@@ -23,6 +23,7 @@ def validate_dataset(dataset_dir: Path) -> bool:
     if not metadata.exists():
         problems.append("missing metadata.jsonl")
 
+    records: list[dict] = []
     if metadata.exists():
         records = _load_records(metadata)
         if not records:

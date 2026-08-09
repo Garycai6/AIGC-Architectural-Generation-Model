@@ -35,7 +35,9 @@ def generate_dataset(out_dir: Path, per_style: int = 50, seed: int = 42) -> int:
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     images_dir = out_dir / "images"
-    images_dir.mkdir(exist_ok=True)
+    if images_dir.exists():
+        shutil.rmtree(images_dir)
+    images_dir.mkdir()
     gen = SimulatorGenerator()
     records: list[dict] = []
     idx = 0
