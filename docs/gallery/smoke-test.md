@@ -45,12 +45,12 @@
 
 # 里程碑 2 数据资产管线验证记录 (2026-08-09, 修复后重新生成)
 
-- synth: `uv run python -m data.synth --out data/datasets/synth_demo --per-style 50 --seed 42` 生成 400 条记录,images/ 下 400 张 PNG,metadata.jsonl 索引完整
+- synth: `uv run python -m data.synth --out data/datasets/synth_demo --per-style 50 --seed 42` 生成 400 条记录,metadata.jsonl 索引完整
 - 修复: `generate_dataset` 采样器按风格派生独立 RNG(`random.Random(f"{seed}:{style}")`),消除跨风格参数重复(Task 5)
 - clean: `uv run python -m data.clean --dir data/datasets/synth_demo` 第一遍删除 75 条(同风格内参数域有限导致的哈希重复——模拟器几何形状简单,去重属正常行为);再跑 clean 输出 0 文件 0 记录,幂等
 - validate: `uv run python -m data.validate --dir data/datasets/synth_demo` 输出 `Dataset OK (325 images)`,通过
 - 全量回归: 69 passed (56 原有 + 12 新增 + 1 Task 5 唯一性测试); ruff check + format 双绿
-- data/datasets/ 已加入 .gitignore,400 张 PNG 不入库
+- data/datasets/ 已加入 .gitignore,清洗后 325 张 PNG 不入库
 
 
 
