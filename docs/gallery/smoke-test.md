@@ -29,4 +29,8 @@
 - 关键修复:输出列表 `output[-1]` 才是真图,`output[0]` 是 Canny 边缘图(首次取错)
 - ApiGenerator.generate 完整流程验证通过(两次 SDXL 调用,需加大 client timeout 到 300s)
 - 已固化模型 ID 到 replicate_gen.py(版本哈希固定),测试 mock 反映真实输出结构
+- **目检结论(2026-08-09)**:平面图糊/布局/门窗/尺寸全不对(SDXL 不适合平面图);立面细节错误多(模型幻觉)
+- **决策修正**:平面图退回模拟器(准确程序化生成),效果图保留真模型;`_render_facade_sdxl` 只调一次 SDXL
+- 验证通过:facade 1.25MB 真图 + floorplan 1.8KB 模拟器线稿
+
 

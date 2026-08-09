@@ -61,8 +61,11 @@ async def test_generate_returns_artifact(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_generate_calls_replicate_twice(tmp_path: Path):
-    client, out = _make_client(tmp_path)
+async def test_generate_calls_replicate_once(tmp_path: Path):
+    """Facade goes through real SDXL; floorplan stays simulator line-art (no
+    second SDXL call) — verified 2026-08-05 that SDXL cannot produce correct
+    floor plans."""
+    client, real = _make_client(tmp_path)
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
         side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
@@ -70,8 +73,8 @@ async def test_generate_calls_replicate_twice(tmp_path: Path):
         gen = ApiGenerator(replicate_client=client)
         await gen.generate(_params(), "sid-2", tmp_path, "zh")
 
-    # two SDXL calls (facade + floorplan), through the injected client
-    assert client.run.call_count == 2
+    # one SDXL call (facade only), through the injected client
+    assert client.run.call_count == 1
 
 
 @pytest.mark.asyncio

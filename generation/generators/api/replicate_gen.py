@@ -58,15 +58,12 @@ class ApiGenerator:
         file_url = output[-1] if isinstance(output, list) else output
         urllib.request.urlretrieve(str(file_url), str(out_path))
 
-    async def _render_with_sdxl(self, params, scheme_id, out_dir, lang, kind) -> None:
-        prompt = build_prompt(params, kind, lang)
-        control = out_dir / ("facade_line.png" if kind == "facade" else "floorplan_line.png")
-        await asyncio.to_thread(
-            self._call_sdxl,
-            prompt,
-            control,
-            out_dir / (FACADE_FILE if kind == "facade" else FLOORPLAN_FILE),
-        )
+    async def _render_facade_sdxl(self, params, scheme_id, out_dir, lang) -> None:
+        """Facade goes through SDXL + ControlNet (facade_line.png is the
+        condition image); floorplan stays the simulator line-art."""
+        prompt = build_prompt(params, "facade", lang)
+        control = out_dir / "facade_line.png"
+        await asyncio.to_thread(self._call_sdxl, prompt, control, out_dir / FACADE_FILE)
 
     async def generate(
         self,
@@ -75,23 +72,19 @@ class ApiGenerator:
         out_dir: Path,
         lang: str = "zh",
     ) -> GenerationArtifact:
-        # 1. Generate two line-art images as ControlNet condition images
+        # 1. Generate facade line-art as ControlNet condition image, and
+        #    floorplan line-art as the floorplan output (accurate programmatic
+        #    drawing — SDXL cannot produce correct floor plans, verified 2026-08-05).
         await render_scheme(params, scheme_id, out_dir, lang)
-        # 2. Rename to _line suffix (condition images), avoid overwriting real images
+        # 2. Rename facade line-art to _line suffix (condition image)
         line_facade = out_dir / FACADE_FILE
-        line_floorplan = out_dir / FLOORPLAN_FILE
         facade_line = out_dir / "facade_line.png"
-        floorplan_line = out_dir / "floorplan_line.png"
         if line_facade.exists():
             line_facade.rename(facade_line)
-        if line_floorplan.exists():
-            line_floorplan.rename(floorplan_line)
-        # 3. Two SDXL calls (facade + floorplan)
-        await self._render_with_sdxl(params, scheme_id, out_dir, lang, "facade")
-        await self._render_with_sdxl(params, scheme_id, out_dir, lang, "floorplan")
-        # 4. Clean up line-art condition images (keep real images)
+        # 3. One SDXL call (facade only); floorplan stays as simulator line-art
+        await self._render_facade_sdxl(params, scheme_id, out_dir, lang)
+        # 4. Clean up the facade condition image
         facade_line.unlink(missing_ok=True)
-        floorplan_line.unlink(missing_ok=True)
         return GenerationArtifact(
             scheme_id=scheme_id,
             images=[
