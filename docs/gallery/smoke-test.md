@@ -43,5 +43,13 @@
 - 端到端:POST /api/v1/generate 200 + 结果图加载成功
 - 全量测试 56 passed,ruff 全绿,前端 build 通过
 
+# 里程碑 2 数据资产管线验证记录 (2026-08-09)
+
+- synth: `uv run python -m data.synth --out data/datasets/synth_demo --per-style 50 --seed 42` 生成 400 条记录,images/ 下 400 张 PNG,metadata.jsonl 索引完整
+- clean: `uv run python -m data.clean --dir data/datasets/synth_demo` 第一遍删除 87 条(77 组哈希重复 + 不同参数组合产生相同模拟器 PNG——模拟器几何形状简单,去重属正常行为);再跑 clean 输出 0 文件 0 记录,幂等
+- validate: `uv run python -m data.validate --dir data/datasets/synth_demo` 输出 `Dataset OK (313 images)`,通过
+- 全量回归: 68 passed (56 原有 + 12 新增); ruff check + format 双绿
+- data/datasets/ 已加入 .gitignore,400 张 PNG 不入库
+
 
 
