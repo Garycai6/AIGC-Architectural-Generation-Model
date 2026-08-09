@@ -11,7 +11,7 @@ def _make_app(cache_dir: str | None = None):
     settings = Settings(
         deepseek_api_key="",
         deepseek_base_url="https://api.deepseek.com",
-        image_provider="replicate",
+        image_provider="simulator",
         max_free_quota=5,
         cache_dir=cache_dir or tempfile.mkdtemp(),
     )
@@ -31,7 +31,7 @@ def test_generate_skeleton(tmp_path):
     settings = Settings(
         deepseek_api_key="",
         deepseek_base_url="https://api.deepseek.com",
-        image_provider="replicate",
+        image_provider="simulator",
         max_free_quota=5,
         cache_dir=str(tmp_path),
     )
@@ -81,3 +81,33 @@ def test_generate_invalid_params():
         },
     )
     assert resp.status_code == 422
+
+
+def test_generate_uses_simulator_by_default(tmp_path):
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=5,
+        cache_dir=str(tmp_path),
+    )
+    client = TestClient(create_app(settings))
+    resp = client.post(
+        "/api/v1/generate",
+        json={
+            "params": {
+                "style": "modern",
+                "floors": 3,
+                "width_m": 10.0,
+                "depth_m": 8.0,
+                "materials": ["glass"],
+                "roof": "flat",
+                "environment": "suburb",
+            },
+            "lang": "zh",
+        },
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()["images"]) == 2

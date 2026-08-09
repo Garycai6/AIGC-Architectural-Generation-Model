@@ -1,11 +1,12 @@
 import pathlib
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 
 from backend.app.core.config import Settings
 from backend.app.schemas.generate import GenerateRequest, GenerationResponse
 from generation.generators import SimulatorGenerator
+from generation.generators.api import ApiGenerator
 from generation.llm.deepseek_client import DeepSeekClient
 
 router = APIRouter(tags=["generate"])
@@ -13,7 +14,7 @@ router = APIRouter(tags=["generate"])
 
 @router.post("/generate", response_model=GenerationResponse)
 async def generate(req: GenerateRequest, request: Request) -> GenerationResponse:
-    """生成:校验参数 + 本地模拟器出图(效果图 + 平面图)。"""
+    """生成:按 image_provider 选生成器(默认模拟器,replicate 走真模型)。"""
     settings: Settings = request.app.state.settings  # 从 app.state 读取(支持测试注入)
     scheme_id = str(uuid.uuid4())
     if not settings.deepseek_api_key:
@@ -26,7 +27,18 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
 
     out_dir = pathlib.Path(settings.cache_dir) / scheme_id
     out_dir.mkdir(parents=True, exist_ok=True)
-    generator = SimulatorGenerator()
+
+    if settings.image_provider == "replicate":
+        if not settings.replicate_api_token:
+            raise HTTPException(status_code=500, detail="replicate_api_token 未配置")
+        import replicate
+
+        generator = ApiGenerator(
+            replicate_client=replicate.Client(token=settings.replicate_api_token)
+        )
+    else:
+        generator = SimulatorGenerator()
+
     artifact = await generator.generate(req.params, scheme_id, out_dir, req.lang)
     return GenerationResponse(
         scheme_id=scheme_id,
