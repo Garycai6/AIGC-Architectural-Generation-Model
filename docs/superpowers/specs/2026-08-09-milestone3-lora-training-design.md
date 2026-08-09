@@ -46,9 +46,12 @@ training/
 ## 训练循环(train.py)
 
 - 加载 SDXL base + peft LoRA;每个风格一次训练运行,共享数据加载
+- 训练范式:**标准 latent-space**——VAE encode 把像素图转成 latent,在 latent 空间加噪/去噪,loss 优化 UNet(peft LoRA);双 tokenizer(CLIP + OpenCLIP)分别编码两个 text encoder(text_encoder / text_encoder_2)
 - 默认超参:`resolution=1024`、`train_batch_size=1`、`lr=1e-4`、`max_train_steps` 按数据量(如 `len(data) × 50 epochs`)、周期性生成 validation 样例图
 - 数据:`dataset.py` 读 `metadata.jsonl` 按风格过滤 facade 记录,构建 `{"image", "prompt"}` 样本
 - 加速:`accelerate` 单卡 config 即跑(4090 单卡)
+
+> **训练循环已修正为标准 latent-space 范式(2026-08-10 审查发现,用户批准)**。
 
 ## 验证(verify.py)
 

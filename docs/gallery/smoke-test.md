@@ -52,5 +52,14 @@
 - 全量回归: 69 passed (56 原有 + 12 新增 + 1 Task 5 唯一性测试); ruff check + format 双绿
 - data/datasets/ 已加入 .gitignore,清洗后 325 张 PNG 不入库
 
+# 里程碑 3 LoRA 训练管线验证记录 (2026-08-10)
+
+- **training 包 6 模块**:config / dataset / export / train / verify / `__main__`(CLI 接线);纯逻辑层(config/dataset/export)本机可测,diffusers/torch 只出现在 train/verify(云端跑)
+- 全量测试: **82 passed + 1 skipped**(`test_training_skip.py` 用 `pytest.importorskip("torch")` 自动跳过,本机无 torch);ruff check + format 双绿
+- **训练范式**:标准 latent-space SDXL LoRA(VAE encode 像素 → latent 加噪/去噪 + 双 tokenizer 编码双 text encoder),云端 AutoDL 执行
+- **云端执行命令**:`uv sync --extra gpu` 后 `uv run python -m training train --dataset-dir data/datasets/synth_demo --style modern --output-dir lora_out`(或 `make train-lora`);验证 `python -m training verify --style modern --output-dir lora_out`
+- **LoRA 产物**:4 个 .safetensors + 样例图;训练产物不入库(weight 文件、样例图)
+- 接入网页是下期任务
+
 
 

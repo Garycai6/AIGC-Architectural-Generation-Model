@@ -742,6 +742,8 @@ git add training/train.py training/verify.py tests/test_training_train.py tests/
 git commit -m "feat: 训练/验证 CLI 入口 train/verify(配置/数据/产物骨架可测)"
 ```
 
+> **计划偏离(2026-08-10,用户批准)**:`_train_loop` 训练循环审查中发现 3 处结构性缺陷(pixel-space 输入 UNet / 单 tokenizer 编码双 encoder / 无用 VAE),已修正为标准 latent-space 训练(VAE encode → latent 加噪去噪 + 双 tokenizer)。实现 commit 见 git log(e00bc62..8038200)。
+
 ---
 
 ### Task 5: __main__.py CLI 接线 + Makefile
@@ -846,3 +848,4 @@ git commit -m "docs: 里程碑3 LoRA 训练管线实施计划 + 验证记录"
 - **类型一致性**:`TrainConfig` 字段、`build_config`、`build_samples`、`lora_output_path` 在全部任务中一致。
 - **不 import torch**:测试全部用纯逻辑 + mock(参照 replicate 测试模式);train/verify 的 torch 代码 guarded import,本机永不执行;`test_training_skip.py` 用 `pytest.importorskip("torch")` 自动跳过。
 - **产物格式**:训练循环用 `safetensors.torch.save_file` 保存(非 torch.save pickle),`load_lora_weights` 才能读取。
+- **训练循环最终以 latent-space 实现**(VAE encode → latent 加噪去噪 + 双 tokenizer,见 Task 4 计划偏离备注)
