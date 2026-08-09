@@ -33,6 +33,7 @@ def validate_dataset(dataset_dir: Path) -> bool:
             img = dataset_dir / r["image"]
             if not img.exists():
                 problems.append(f"missing {r['image']}")
+                continue  # 不存在则跳过后面的 PIL 读取
             indexed.add(Path(r["image"]).name)
             # 标签合法性
             try:
