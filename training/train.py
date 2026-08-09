@@ -23,10 +23,11 @@ def _parse_args(argv: list[str]):
 def _train_loop(cfg):
     """SDXL LoRA 训练循环——仅云端(torch 可用)执行。
 
-    标准 diffusers LoRA 训练:加载 SDXL base,加 peft LoRA,用风格图做
-    目标,输出 .safetensors。本机无 torch 不可达,测试 mock 掉。训练循环
-    的正确性以云端跑通为准(本机无法验证 torch 行为)。
+    标准 diffusers latent-space LoRA 训练:加载 SDXL base,VAE encode 转
+    latent,peft LoRA 微调 UNet,输出 .safetensors。本机无 torch 不可达,
+    测试 mock 掉。训练循环的正确性以云端跑通为准(本机无法验证 torch 行为)。
     """
+    import numpy as np
     import torch
     from diffusers import AutoencoderKL, StableDiffusionXLPipeline
     from diffusers.optimization import get_scheduler
@@ -36,21 +37,26 @@ def _train_loop(cfg):
     from safetensors.torch import save_file
     from transformers import AutoTokenizer
 
+    model_id = "stabilityai/stable-diffusion-xl-base-1.0"
+
     # 1. 加载 SDXL base(仅训练,省显存:不加载 VAE decode)
-    vae = AutoencoderKL.from_pretrained("stabilityai/stable-diffusion-xl-base-1.0", subfolder="vae")
+    vae = AutoencoderKL.from_pretrained(model_id, subfolder="vae")
     pipe = StableDiffusionXLPipeline.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0",
+        model_id,
         vae=vae,
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True,
     )
     pipe.to("cuda")
-    pipe.vae.to(torch.float32)  # fp16 VAE 训练不稳定,回 float32
+    # VAE 仅作 encode,不训练:float32 保 latent 精度,eval + 冻结
+    vae.to("cuda")
+    vae.eval()
+    vae.requires_grad_(False)
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0", subfolder="tokenizer"
-    )
+    # 双 tokenizer:CLIP(text_encoder) 与 OpenCLIP(text_encoder_2) 词表不同
+    tokenizer = AutoTokenizer.from_pretrained(model_id, subfolder="tokenizer", use_fast=False)
+    tokenizer_2 = AutoTokenizer.from_pretrained(model_id, subfolder="tokenizer_2", use_fast=False)
     text_encoder = pipe.text_encoder
     text_encoder_2 = pipe.text_encoder_2
     unet = pipe.unet
@@ -93,17 +99,19 @@ def _train_loop(cfg):
     noise_scheduler = pipe.scheduler
     for _epoch in range(cfg.epochs):
         for img, prompt in zip(images, prompts, strict=True):
+            # 像素 -> latent(VAE encode,仅前向,不更新梯度)
             pixel_values = (
-                torch.tensor(
-                    [img.resize((cfg.resolution, cfg.resolution))],
-                    dtype=torch.float32,
-                ).permute(0, 3, 1, 2)
+                torch.from_numpy(np.array(img.resize((cfg.resolution, cfg.resolution))))
+                .float()
+                .permute(2, 0, 1)[None]
                 / 127.5
                 - 1.0
             )
-            pixel_values = pixel_values.to(device="cuda", dtype=torch.float16)
+            pixel_values = pixel_values.to(device="cuda", dtype=torch.float32)
+            latents = vae.encode(pixel_values).latent_dist.sample()
+            latents = latents * vae.config.scaling_factor
 
-            # 双 text encoder 编码 prompt
+            # 双 text encoder 各用独立 tokenizer 编码 prompt
             text_inputs = tokenizer(
                 prompt,
                 padding="max_length",
@@ -112,7 +120,7 @@ def _train_loop(cfg):
                 return_tensors="pt",
             )
             encoder_hidden_states = text_encoder(text_inputs.input_ids.to("cuda"))[0]
-            text_inputs_2 = tokenizer(
+            text_inputs_2 = tokenizer_2(
                 prompt,
                 padding="max_length",
                 max_length=77,
@@ -121,17 +129,17 @@ def _train_loop(cfg):
             )
             encoder_hidden_states_2 = text_encoder_2(text_inputs_2.input_ids.to("cuda"))[0]
 
-            # 加噪声 + denoising objective
-            noise = torch.randn_like(pixel_values)
+            # latent 上加噪 + denoising objective
+            noise = torch.randn_like(latents)
             timesteps = torch.randint(
                 0,
                 noise_scheduler.config.num_train_timesteps,
                 (1,),
                 device="cuda",
             ).long()
-            noisy = noise_scheduler.add_noise(pixel_values, noise, timesteps)
+            noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
             noise_pred = unet(
-                noisy,
+                noisy_latents,
                 timesteps,
                 encoder_hidden_states=encoder_hidden_states,
                 added_cond_kwargs={
