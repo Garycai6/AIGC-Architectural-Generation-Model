@@ -1,1 +1,3 @@
-"""API 生成器包——验证期走 Replicate SDXL + ControlNet。"""
+from generation.generators.api.replicate_gen import ApiGenerator, ApiGeneratorError
+
+__all__ = ["ApiGenerator", "ApiGeneratorError"]
