@@ -83,16 +83,17 @@ def test_generate_invalid_params():
     assert resp.status_code == 422
 
 
-def test_generate_uses_simulator_by_default(tmp_path):
+def test_generate_defaults_to_simulator(tmp_path):
+    # 不显式传 image_provider → Settings 默认 "simulator",验证默认回退路径
     from backend.app.core.config import Settings
 
     settings = Settings(
         deepseek_api_key="",
         deepseek_base_url="https://api.deepseek.com",
-        image_provider="simulator",
         max_free_quota=5,
         cache_dir=str(tmp_path),
     )
+    assert settings.image_provider == "simulator"  # 默认值必须走模拟器
     client = TestClient(create_app(settings))
     resp = client.post(
         "/api/v1/generate",
