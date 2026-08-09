@@ -37,3 +37,6 @@ wandb/
 # IDE
 .idea/
 .vscode/
+
+# Worktrees
+.worktrees/
