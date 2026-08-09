@@ -57,7 +57,7 @@ def generate_dataset(out_dir: Path, per_style: int = 50, seed: int = 42) -> int:
                         width_px, height_px = im.size
                     records.append(
                         {
-                            "id": record_id,
+                            "id": target.stem,
                             "image": f"images/{target.name}",
                             "source": "synth",
                             "kind": img.kind,

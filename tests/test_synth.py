@@ -43,6 +43,8 @@ def test_generate_dataset_metadata_schema(tmp_path: Path):
         assert r["kind"] in ("facade", "floorplan")
         assert (out / r["image"]).exists()
         BuildingParams(**r["params"])
+    ids = [r["id"] for r in rows]
+    assert len(ids) == len(set(ids))  # id 唯一
 
 
 def test_generate_dataset_deterministic(tmp_path: Path):
