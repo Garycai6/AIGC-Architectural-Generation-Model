@@ -437,24 +437,23 @@ git commit -m "feat: 添加 ApiGenerator(Replicate SDXL+ControlNet,线稿作条�
 - Consumes: `SimulatorGenerator`/`ApiGenerator`(已有)、`Settings.image_provider`(已有字段)
 - Produces:
   - `generate` 路由:`image_provider == "replicate"` 时用 `ApiGenerator`,否则 `SimulatorGenerator`
+  - `Settings.image_provider` **默认改为 `"simulator"`**(避免默认 replicate+空 token 导致每次 generate 500;开箱行为匹配路由默认)
 
 - [ ] **Step 1: 写失败的测试(provider 切换)**
 
 ```python
 # tests/test_api.py 追加:
-from unittest.mock import patch
-
-
-def test_generate_uses_simulator_by_default(tmp_path):
+def test_generate_defaults_to_simulator(tmp_path):
+    # 不显式传 image_provider → Settings 默认 "simulator",验证默认回退路径
     from backend.app.core.config import Settings
 
     settings = Settings(
         deepseek_api_key="",
         deepseek_base_url="https://api.deepseek.com",
-        image_provider="simulator",  # 默认模拟器
         max_free_quota=5,
         cache_dir=str(tmp_path),
     )
+    assert settings.image_provider == "simulator"  # 默认值必须走模拟器
     client = TestClient(create_app(settings))
     resp = client.post(
         "/api/v1/generate",
@@ -533,19 +532,36 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
     )
 ```
 
-- [ ] **Step 4: 运行全量测试确认无回归**
+- [ ] **Step 4: 修改 config.py 默认 provider 为 simulator**
+
+```python
+# backend/app/core/config.py
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com"
+    image_provider: str = "simulator"  # simulator | replicate(默认模拟器,避免空 token 500)
+    replicate_api_token: str = ""
+    cache_dir: str = ".cache/archgen"
+    max_free_quota: int = 5
+```
+
+> 注:阶段 0 遗留的 `image_provider="replicate"` 默认值 + 空 `replicate_api_token` 会导致部署时不配 env 就每次 generate 500。改为 `"simulator"` 让开箱行为安全,配 env 才能启用真模型。
+
+- [ ] **Step 5: 运行全量测试确认无回归**
 
 Run: `uv run pytest -q`
-Expected: 52 passed(51 + 1 新 provider 测试)
+Expected: 52 passed(51 + 1 新默认 provider 测试)
 
-- [ ] **Step 5: 运行 ruff check 并提交**
+- [ ] **Step 6: 运行 ruff check 并提交**
 
 Run: `uv run ruff check . && uv run ruff format .`
 Expected: 无报错。
 
 ```bash
-git add backend/app/api/generate.py tests/test_api.py
-git commit -m "feat: API 路由按 image_provider 切换生成器(默认模拟器)"
+git add backend/app/api/generate.py backend/app/core/config.py tests/test_api.py
+git commit -m "feat: API 路由按 image_provider 切换生成器(默认模拟器)+ config 默认值修正"
 ```
 
 ---
@@ -683,4 +699,4 @@ git commit -m "docs: 记录阶段 3 冒烟验证结果 + replicate provider 集�
 
 **Mock 说明:** Task 2 的测试 patch `replicate.run` 并 mock `urlretrieve`(或返回可下载 URL),保证离线确定性。Task 4 的 provider 切换测试 mock `ApiGenerator.generate`。真调验证(Step 4)独立标记,不进入 pytest。
 
-**兼容性:** 现有 45 测试(含模拟器路径)全部保持通过。`image_provider` 默认 `"simulator"`(Settings 默认值),现有行为不变。
+**兼容性:** 现有 45 测试(含模拟器路径)全部保持通过。`image_provider` 默认改为 `"simulator"`(Settings 默认值)——阶段 0 的 `"replicate"` 默认 + 空 token 会导致未配 env 时 generate 500,本计划修正此陷阱。
