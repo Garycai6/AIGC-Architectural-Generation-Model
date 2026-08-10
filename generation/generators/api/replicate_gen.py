@@ -32,27 +32,39 @@ class ApiGenerator:
     images (facade + floorplan).
     """
 
-    def __init__(self, replicate_client=None, model: str = SDXL_MODEL):
+    def __init__(
+        self,
+        replicate_client=None,
+        model: str = SDXL_MODEL,
+        lora_urls: dict[str, str] | None = None,
+    ):
         if replicate_client is None:
             raise ApiGeneratorError("replicate client not provided (set replicate_api_token)")
         self._client = replicate_client
         self._model = model
+        self._lora_urls = lora_urls if lora_urls is not None else {}
 
-    def _call_sdxl(self, prompt: str, control_image: Path, out_path: Path) -> None:
+    def _call_sdxl(
+        self,
+        prompt: str,
+        control_image: Path,
+        out_path: Path,
+        lora_url: str | None = None,
+    ) -> None:
         """Synchronous Replicate ControlNet SDXL call (runs in thread pool)."""
         with open(control_image, "rb") as f:
-            output = self._client.run(
-                self._model,
-                input={
-                    "prompt": prompt,
-                    "negative_prompt": build_negative_prompt(),
-                    "image": f,
-                    "model_type": CONTROLNET_TYPE,
-                    "num_inference_steps": CONTROLNET_STEPS,
-                    "guidance_scale": CONTROLNET_GUIDANCE,
-                    "seed": 42,
-                },
-            )
+            sdxl_input = {
+                "prompt": prompt,
+                "negative_prompt": build_negative_prompt(),
+                "image": f,
+                "model_type": CONTROLNET_TYPE,
+                "num_inference_steps": CONTROLNET_STEPS,
+                "guidance_scale": CONTROLNET_GUIDANCE,
+                "seed": 42,
+            }
+            if lora_url is not None:
+                sdxl_input["lora_weights"] = lora_url
+            output = self._client.run(self._model, input=sdxl_input)
         # output is a list of file URLs; the last item is the real generated
         # image (earlier items are ControlNet condition/edge maps).
         file_url = output[-1] if isinstance(output, list) else output
@@ -63,7 +75,13 @@ class ApiGenerator:
         condition image); floorplan stays the simulator line-art."""
         prompt = build_prompt(params, "facade", lang)
         control = out_dir / "facade_line.png"
-        await asyncio.to_thread(self._call_sdxl, prompt, control, out_dir / FACADE_FILE)
+        await asyncio.to_thread(
+            self._call_sdxl,
+            prompt,
+            control,
+            out_dir / FACADE_FILE,
+            self._lora_urls.get(params.style),
+        )
 
     async def generate(
         self,

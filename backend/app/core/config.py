@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     image_provider: str = "simulator"  # simulator | replicate(默认模拟器,避免空 token 500)
     replicate_api_token: str = ""
+    sdxl_model: str = ""  # 带 LoRA 的模型名,空=用默认 SDXL_MODEL
+    lora_weights_dir: str = ""  # 风格 LoRA 权重公网 URL 目录,空=不注入
     cache_dir: str = ".cache/archgen"
     max_free_quota: int = 5
 

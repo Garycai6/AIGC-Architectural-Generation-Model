@@ -84,3 +84,83 @@ async def test_generate_without_client_raises(tmp_path: Path):
 
     with pytest.raises(ApiGeneratorError):
         ApiGenerator(replicate_client=None)
+
+
+@pytest.mark.asyncio
+async def test_generate_injects_lora_when_configured(tmp_path: Path):
+    """配置了 lora_urls 且风格命中 → client.run 收到 lora_weights=<url>。"""
+    client, real = _make_client(tmp_path)
+    with patch(
+        "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = ApiGenerator(
+            replicate_client=client,
+            lora_urls={"modern": "https://cdn.example.com/lora/modern.tar"},
+        )
+        await gen.generate(_params(style="modern"), "sid-l1", tmp_path, "zh")
+
+    kwargs = client.run.call_args.kwargs
+    assert kwargs["input"]["lora_weights"] == "https://cdn.example.com/lora/modern.tar"
+
+
+@pytest.mark.asyncio
+async def test_generate_no_lora_when_unconfigured(tmp_path: Path):
+    """未配置 lora_urls → client.run 不收 lora_weights(向后兼容)。"""
+    client, real = _make_client(tmp_path)
+    with patch(
+        "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = ApiGenerator(replicate_client=client)
+        await gen.generate(_params(), "sid-l2", tmp_path, "zh")
+
+    assert "lora_weights" not in client.run.call_args.kwargs["input"]
+
+
+@pytest.mark.asyncio
+async def test_generate_lora_missing_style_falls_back(tmp_path: Path):
+    """lora_urls 配置了但没有该风格 → 不注入 lora_weights,不报错(降级)。"""
+    client, real = _make_client(tmp_path)
+    with patch(
+        "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = ApiGenerator(
+            replicate_client=client,
+            lora_urls={"modern": "https://cdn.example.com/lora/modern.tar"},
+        )
+        await gen.generate(_params(style="nordic"), "sid-l3", tmp_path, "zh")
+
+    assert "lora_weights" not in client.run.call_args.kwargs["input"]
+
+
+def test_settings_lora_fields_default_empty():
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=5,
+        cache_dir=".tmp-test",
+    )
+    assert settings.sdxl_model == ""
+    assert settings.lora_weights_dir == ""
+
+
+def test_settings_lora_fields_can_be_set():
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="replicate",
+        max_free_quota=5,
+        cache_dir=".tmp-test",
+        replicate_api_token="tok",
+        sdxl_model="fermatresearch/sdxl-controlnet-lora:latest",
+        lora_weights_dir="https://cdn.example.com/lora",
+    )
+    assert settings.sdxl_model == "fermatresearch/sdxl-controlnet-lora:latest"
+    assert settings.lora_weights_dir == "https://cdn.example.com/lora"
