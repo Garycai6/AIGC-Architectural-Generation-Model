@@ -61,5 +61,13 @@
 - **LoRA 产物**:4 风格各 1 个 .safetensors + 样例图;训练产物不入库(weight 文件、样例图)
 - 接入网页是下期任务
 
+# 里程碑 3.5 LoRA 接入网页验证记录 (2026-08-11)
+
+- ApiGenerator 支持 lora_urls(风格→公网 URL),命中风格注入 lora_weights,缺省降级不注入
+- Settings 新增 sdxl_model / lora_weights_dir;replicate 分支按 {dir}/{style}.tar 组装
+- mock 单测:配置注入 / 未配置不注入 / 风格缺失降级 3 例 + Settings 字段 2 例 + 路由组装 1 例
+- 全量回归: **88 passed + 1 skipped**(82 原有 + 6 新增);ruff check + format 双绿
+- 真调留待人工:REPLICATE_API_TOKEN 本机非空可用,但**公网权重 URL 未就绪**——里程碑3 产物在云端 AutoDL,本机无 lora_out;接入前需将裸 .safetensors tar 打包重命名(lora.safetensors)上传至公网,并将 `sdxl_model` 指向带 `lora_weights` 字段的 ControlNet 模型(如 `fermatresearch/sdxl-controlnet-lora`)
+
 
 
