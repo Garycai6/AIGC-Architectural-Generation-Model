@@ -43,3 +43,45 @@ def test_pack_lora_weight_scale(tmp_path: Path):
 def test_pack_lora_missing_weight_raises(tmp_path: Path):
     with pytest.raises(FileNotFoundError):
         pack_lora(tmp_path, "nordic")
+
+
+def test_pack_main_cli(tmp_path: Path, capsys):
+    _write_fake_lora(tmp_path)
+    from training.pack import main
+
+    rc = main(["--output-dir", str(tmp_path), "--style", "modern"])
+    assert rc == 0
+    assert (tmp_path / "modern.tar").exists()
+    out = capsys.readouterr().out
+    assert "[pack] 已打包" in out
+
+
+def test_pack_main_missing_style_raises(tmp_path: Path):
+    from training.pack import main
+
+    with pytest.raises(FileNotFoundError):
+        main(["--output-dir", str(tmp_path), "--style", "nordic"])
+
+
+def test_main_dispatch_package(tmp_path: Path):
+    import subprocess
+    import sys
+
+    _write_fake_lora(tmp_path)
+    # python -m training 必须从项目根目录运行,不能用 tmp_path
+    project_root = Path(__file__).parents[1]
+    code = subprocess.call(
+        [
+            sys.executable,
+            "-m",
+            "training",
+            "package",
+            "--output-dir",
+            str(tmp_path),
+            "--style",
+            "modern",
+        ],
+        cwd=str(project_root),
+    )
+    assert code == 0
+    assert (tmp_path / "modern.tar").exists()

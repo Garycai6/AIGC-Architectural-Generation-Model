@@ -30,3 +30,17 @@ def pack_lora(output_dir: Path, style: str, weight_scale: float = 1.0) -> Path:
         info.size = len(special)
         tar.addfile(info, io.BytesIO(special))
     return out
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="training.pack")
+    parser.add_argument("--output-dir", required=True, help="含训练产物的目录")
+    parser.add_argument("--style", required=True, help="风格名(modern/neoclassic/european/nordic)")
+    parser.add_argument("--weight", type=float, default=1.0, help="LoRA 权重缩放(默认 1.0)")
+    args = parser.parse_args(argv)
+
+    path = pack_lora(Path(args.output_dir), args.style, args.weight)
+    print(f"[pack] 已打包 → {path}")
+    return 0
