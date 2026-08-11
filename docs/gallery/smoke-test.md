@@ -69,5 +69,13 @@
 - 全量回归: **88 passed + 1 skipped**(82 原有 + 6 新增);ruff check + format 双绿
 - 真调留待人工:REPLICATE_API_TOKEN 本机非空可用,但**公网权重 URL 未就绪**——里程碑3 产物在云端 AutoDL,本机无 lora_out;接入前需将裸 .safetensors tar 打包重命名(lora.safetensors)上传至公网,并将 `sdxl_model` 指向带 `lora_weights` 字段的 ControlNet 模型(如 `fermatresearch/sdxl-controlnet-lora`)
 
+# ApiGenerator 异步 prediction 改造验证记录 (2026-08-11)
+
+- _call_sdxl 改 async,用 client.async_run(model, input, wait=300) 替代同步 client.run + to_thread
+- SDK 内置异步轮询(async_create + prediction.async_wait),wait=300 解除 create 请求 60s read timeout
+- mock 单测:async_run 调用 1 次、lora_weights 注入/降级逻辑不变、wait=300 断言
+- 全量回归: 88 passed + 1 skipped;ruff check + format 双绿
+- 真调:真调留待人工:REPLICATE_API_TOKEN 可用但公网 LoRA 权重 URL 未就绪
+
 
 
