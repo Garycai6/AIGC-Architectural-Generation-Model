@@ -1,4 +1,3 @@
-import asyncio
 import urllib.request
 from pathlib import Path
 
@@ -19,6 +18,7 @@ CONTROLNET_GUIDANCE = 7.5
 
 FACADE_FILE = "facade.png"
 FLOORPLAN_FILE = "floorplan.png"
+SDXL_WAIT_SECONDS = 300
 
 
 class ApiGeneratorError(Exception):
@@ -44,14 +44,14 @@ class ApiGenerator:
         self._model = model
         self._lora_urls = lora_urls if lora_urls is not None else {}
 
-    def _call_sdxl(
+    async def _call_sdxl(
         self,
         prompt: str,
         control_image: Path,
         out_path: Path,
         lora_url: str | None = None,
     ) -> None:
-        """Synchronous Replicate ControlNet SDXL call (runs in thread pool)."""
+        """Asynchronous Replicate ControlNet SDXL call (SDK polls internally)."""
         with open(control_image, "rb") as f:
             sdxl_input = {
                 "prompt": prompt,
@@ -64,7 +64,9 @@ class ApiGenerator:
             }
             if lora_url is not None:
                 sdxl_input["lora_weights"] = lora_url
-            output = self._client.run(self._model, input=sdxl_input)
+            output = await self._client.async_run(
+                self._model, input=sdxl_input, wait=SDXL_WAIT_SECONDS
+            )
         # output is a list of file URLs; the last item is the real generated
         # image (earlier items are ControlNet condition/edge maps).
         file_url = output[-1] if isinstance(output, list) else output
@@ -75,12 +77,8 @@ class ApiGenerator:
         condition image); floorplan stays the simulator line-art."""
         prompt = build_prompt(params, "facade", lang)
         control = out_dir / "facade_line.png"
-        await asyncio.to_thread(
-            self._call_sdxl,
-            prompt,
-            control,
-            out_dir / FACADE_FILE,
-            self._lora_urls.get(params.style),
+        await self._call_sdxl(
+            prompt, control, out_dir / FACADE_FILE, self._lora_urls.get(params.style)
         )
 
     async def generate(

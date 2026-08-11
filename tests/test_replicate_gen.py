@@ -1,6 +1,6 @@
 # tests/test_replicate_gen.py
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -24,7 +24,7 @@ def _params(**overrides):
 
 
 def _make_client(tmp_path: Path):
-    """Build a client with mock .run returning [edge-map, real-image] paths.
+    """Build a client with mock .async_run returning [edge-map, real-image] paths.
 
     Mirrors the real controlnet-sdxl output: list where the LAST item is the
     real generated image (earlier items are ControlNet edge maps).
@@ -34,7 +34,7 @@ def _make_client(tmp_path: Path):
     real = tmp_path / "real.png"
     real.write_bytes(b"fake-png-bytes")
     client = MagicMock()
-    client.run.return_value = [str(edge), str(real)]
+    client.async_run = AsyncMock(return_value=[str(edge), str(real)])
     return client, real
 
 
@@ -74,7 +74,7 @@ async def test_generate_calls_replicate_once(tmp_path: Path):
         await gen.generate(_params(), "sid-2", tmp_path, "zh")
 
     # one SDXL call (facade only), through the injected client
-    assert client.run.call_count == 1
+    assert client.async_run.call_count == 1
 
 
 @pytest.mark.asyncio
@@ -100,7 +100,7 @@ async def test_generate_injects_lora_when_configured(tmp_path: Path):
         )
         await gen.generate(_params(style="modern"), "sid-l1", tmp_path, "zh")
 
-    kwargs = client.run.call_args.kwargs
+    kwargs = client.async_run.call_args.kwargs
     assert kwargs["input"]["lora_weights"] == "https://cdn.example.com/lora/modern.tar"
 
 
@@ -115,7 +115,7 @@ async def test_generate_no_lora_when_unconfigured(tmp_path: Path):
         gen = ApiGenerator(replicate_client=client)
         await gen.generate(_params(), "sid-l2", tmp_path, "zh")
 
-    assert "lora_weights" not in client.run.call_args.kwargs["input"]
+    assert "lora_weights" not in client.async_run.call_args.kwargs["input"]
 
 
 @pytest.mark.asyncio
@@ -132,7 +132,7 @@ async def test_generate_lora_missing_style_falls_back(tmp_path: Path):
         )
         await gen.generate(_params(style="nordic"), "sid-l3", tmp_path, "zh")
 
-    assert "lora_weights" not in client.run.call_args.kwargs["input"]
+    assert "lora_weights" not in client.async_run.call_args.kwargs["input"]
 
 
 def test_settings_lora_fields_default_empty():
@@ -164,3 +164,18 @@ def test_settings_lora_fields_can_be_set():
     )
     assert settings.sdxl_model == "fermatresearch/sdxl-controlnet-lora:latest"
     assert settings.lora_weights_dir == "https://cdn.example.com/lora"
+
+
+@pytest.mark.asyncio
+async def test_generate_async_run_waits_300(tmp_path: Path):
+    """异步调用收到 wait=300(解除 60s read timeout)。"""
+    client, real = _make_client(tmp_path)
+    with patch(
+        "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = ApiGenerator(replicate_client=client)
+        await gen.generate(_params(), "sid-w1", tmp_path, "zh")
+
+    kwargs = client.async_run.call_args.kwargs
+    assert kwargs["wait"] == 300
