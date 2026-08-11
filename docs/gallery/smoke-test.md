@@ -77,5 +77,13 @@
 - 全量回归: 89 passed + 1 skipped;ruff check + format 双绿
 - 真调:真调留待人工:REPLICATE_API_TOKEN 可用但公网 LoRA 权重 URL 未就绪
 
+# LoRA tar 打包工具验证记录 (2026-08-11)
+
+- training.pack 把 {style}.safetensors 打包成 {style}.tar(内含 lora.safetensors + special_params.json)
+- CLI: python -m training package --output-dir <dir> --style <style> [--weight 1.0]
+- mock 单测:tar 成员结构/扁平、weight 缩放、输入缺失抛错、CLI 分派
+- 全量回归: 95 passed + 1 skipped;ruff check + format 双绿
+- 用途:打包 tar 上传公网 URL 后,配 sdxl_model + lora_weights_dir 即可真调验证(留待人工)
+
 
 
