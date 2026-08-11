@@ -88,7 +88,7 @@ async def test_generate_without_client_raises(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_generate_injects_lora_when_configured(tmp_path: Path):
-    """配置了 lora_urls 且风格命中 → client.run 收到 lora_weights=<url>。"""
+    """配置了 lora_urls 且风格命中 → client.async_run 收到 lora_weights=<url>。"""
     client, real = _make_client(tmp_path)
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
@@ -106,7 +106,7 @@ async def test_generate_injects_lora_when_configured(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_generate_no_lora_when_unconfigured(tmp_path: Path):
-    """未配置 lora_urls → client.run 不收 lora_weights(向后兼容)。"""
+    """未配置 lora_urls → client.async_run 不收 lora_weights(向后兼容)。"""
     client, real = _make_client(tmp_path)
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
