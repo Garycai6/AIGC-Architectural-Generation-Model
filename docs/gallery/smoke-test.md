@@ -74,7 +74,7 @@
 - _call_sdxl 改 async,用 client.async_run(model, input, wait=300) 替代同步 client.run + to_thread
 - SDK 内置异步轮询(async_create + prediction.async_wait),wait=300 解除 create 请求 60s read timeout
 - mock 单测:async_run 调用 1 次、lora_weights 注入/降级逻辑不变、wait=300 断言
-- 全量回归: 88 passed + 1 skipped;ruff check + format 双绿
+- 全量回归: 89 passed + 1 skipped;ruff check + format 双绿
 - 真调:真调留待人工:REPLICATE_API_TOKEN 可用但公网 LoRA 权重 URL 未就绪
 
 
