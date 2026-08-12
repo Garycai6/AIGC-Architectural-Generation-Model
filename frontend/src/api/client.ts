@@ -10,7 +10,11 @@ export interface BuildingParams {
   color_scheme?: string;
 }
 
-export class QuotaExhaustedError extends Error {}
+export class QuotaExhaustedError extends Error {
+  constructor() {
+    super("Quota exhausted");
+  }
+}
 
 const VISITOR_ID_KEY = "archgen_visitor_id";
 

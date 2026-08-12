@@ -56,6 +56,7 @@ def test_generate_skeleton(tmp_path):
     body = resp.json()
     assert body["scheme_id"]
     assert len(body["images"]) == 2
+    assert body["remaining_quota"] == 5  # 无头请求报满额(max_free_quota=5)
     assert "设计" in body["description"]  # 空 key → 占位文案分支
     # 静态文件可访问
     for url in body["images"]:
@@ -262,6 +263,7 @@ def test_generate_quota_isolated_per_visitor(tmp_path):
         "/api/v1/generate", json=_quota_payload(), headers={"X-Visitor-Id": "visitor-a"}
     )
     assert resp.status_code == 200
+    assert resp.json()["remaining_quota"] == 0  # max=1,consumed its only slot
     # visitor-a 再次请求 → 429
     resp = client.post(
         "/api/v1/generate", json=_quota_payload(), headers={"X-Visitor-Id": "visitor-a"}
@@ -272,3 +274,4 @@ def test_generate_quota_isolated_per_visitor(tmp_path):
         "/api/v1/generate", json=_quota_payload(), headers={"X-Visitor-Id": "visitor-b"}
     )
     assert resp.status_code == 200
+    assert resp.json()["remaining_quota"] == 0  # max=1,consumed its only slot

@@ -24,9 +24,10 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
     remaining_quota = settings.max_free_quota  # 无头请求默认报满额(向后兼容)
     visitor_id = request.headers.get("X-Visitor-Id")
     if visitor_id:
-        if quota_service.remaining(visitor_id, date.today().isoformat()) == 0:
+        today = date.today().isoformat()
+        if quota_service.remaining(visitor_id, today) == 0:
             raise HTTPException(status_code=429, detail="今日免费额度已用完")
-        remaining_quota = quota_service.consume(visitor_id, date.today().isoformat())
+        remaining_quota = quota_service.consume(visitor_id, today)
     scheme_id = str(uuid.uuid4())
     if not settings.deepseek_api_key:
         description = (
