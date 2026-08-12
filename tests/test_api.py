@@ -208,3 +208,67 @@ def test_generate_replicate_injects_lora_and_model(tmp_path):
             "european": "https://cdn.example.com/lora/european.tar",
             "nordic": "https://cdn.example.com/lora/nordic.tar",
         }
+
+
+def _quota_payload():
+    return {
+        "params": {
+            "style": "modern",
+            "floors": 3,
+            "width_m": 10.0,
+            "depth_m": 8.0,
+            "materials": ["glass"],
+            "roof": "flat",
+            "environment": "suburb",
+        },
+        "lang": "zh",
+    }
+
+
+def test_generate_quota_exhausted_after_max(tmp_path):
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=3,
+        cache_dir=str(tmp_path),
+    )
+    client = TestClient(create_app(settings))
+    headers = {"X-Visitor-Id": "visitor-1"}
+    for i in range(3):
+        resp = client.post("/api/v1/generate", json=_quota_payload(), headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["remaining_quota"] == 2 - i  # 2, 1, 0
+    resp = client.post("/api/v1/generate", json=_quota_payload(), headers=headers)
+    assert resp.status_code == 429
+    assert resp.json() == {"detail": "今日免费额度已用完"}
+
+
+def test_generate_quota_isolated_per_visitor(tmp_path):
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=1,
+        cache_dir=str(tmp_path),
+    )
+    client = TestClient(create_app(settings))
+    # visitor-a 用满 1 次
+    resp = client.post(
+        "/api/v1/generate", json=_quota_payload(), headers={"X-Visitor-Id": "visitor-a"}
+    )
+    assert resp.status_code == 200
+    # visitor-a 再次请求 → 429
+    resp = client.post(
+        "/api/v1/generate", json=_quota_payload(), headers={"X-Visitor-Id": "visitor-a"}
+    )
+    assert resp.status_code == 429
+    # visitor-b 独立计数 → 200
+    resp = client.post(
+        "/api/v1/generate", json=_quota_payload(), headers={"X-Visitor-Id": "visitor-b"}
+    )
+    assert resp.status_code == 200

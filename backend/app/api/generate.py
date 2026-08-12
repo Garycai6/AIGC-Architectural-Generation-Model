@@ -1,9 +1,11 @@
 import pathlib
 import uuid
+from datetime import date
 
 from fastapi import APIRouter, HTTPException, Request
 
 from backend.app.core.config import Settings
+from backend.app.core.quota import QuotaService
 from backend.app.schemas.generate import GenerateRequest, GenerationResponse
 from generation.generators import SimulatorGenerator
 from generation.generators.api import ApiGenerator
@@ -18,6 +20,13 @@ router = APIRouter(tags=["generate"])
 async def generate(req: GenerateRequest, request: Request) -> GenerationResponse:
     """生成:按 image_provider 选生成器(默认模拟器,replicate 走真模型)。"""
     settings: Settings = request.app.state.settings  # 从 app.state 读取(支持测试注入)
+    quota_service: QuotaService = request.app.state.quota_service
+    remaining_quota = settings.max_free_quota  # 无头请求默认报满额(向后兼容)
+    visitor_id = request.headers.get("X-Visitor-Id")
+    if visitor_id:
+        if quota_service.remaining(visitor_id, date.today().isoformat()) == 0:
+            raise HTTPException(status_code=429, detail="今日免费额度已用完")
+        remaining_quota = quota_service.consume(visitor_id, date.today().isoformat())
     scheme_id = str(uuid.uuid4())
     if not settings.deepseek_api_key:
         description = (
@@ -51,4 +60,5 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
         scheme_id=scheme_id,
         description=description,
         images=[img.url for img in artifact.images],
+        remaining_quota=remaining_quota,
     )
