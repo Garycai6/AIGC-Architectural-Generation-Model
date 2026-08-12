@@ -85,5 +85,12 @@
 - 全量回归: 95 passed + 1 skipped;ruff check + format 双绿
 - 用途:打包 tar 上传公网 URL 后,配 sdxl_model + lora_weights_dir 即可真调验证(留待人工)
 
+# 前端 roof 控件验证记录 (2026-08-12)
 
+- ParamForm 新增「屋顶」下拉(平顶/坡顶/四坡顶),默认「平顶」,替换硬编码 roof: "flat"
+- 提交值用原始枚举值(flat/pitched/hipped);下拉显示 i18n 本地化标签(中文/英文)
+- 浏览器验证:中文「屋顶」下拉默认「平顶」三选项;切 EN → Roof/Flat/Pitched/Hipped
+- 端到端:同一参数仅 roof 不同,3 种屋顶效果图 PNG 字节全部不同(flat/pitched/hipped),roof 真实影响出图
+- 后端零改动(roof 已有模拟器几何 + SDXL prompt 支持);全量回归 95 passed + 1 skipped
+- 遗留:environment 控件暂缓(模拟器模式无视觉差异,留待真调验证阶段)
 
