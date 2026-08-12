@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateScheme } from "../../api/client";
+import { generateScheme, QuotaExhaustedError } from "../../api/client";
 import { useLang } from "../../contexts";
 
 const STYLES = ["modern", "neoclassic", "european", "nordic"];
@@ -20,6 +20,7 @@ export default function ParamForm() {
   const [roof, setRoof] = useState("flat");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
   const [images, setImages] = useState<ResultImages>({});
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -39,11 +40,12 @@ export default function ParamForm() {
         },
         lang
       );
+      setRemainingQuota(res.remaining_quota);
       const facade = res.images.find((u) => u.includes("facade"));
       const floorplan = res.images.find((u) => u.includes("floorplan"));
       setImages({ facade, floorplan });
     } catch (err) {
-      setError(messages.error);
+      setError(err instanceof QuotaExhaustedError ? messages.quota_exhausted : messages.error);
     } finally {
       setLoading(false);
     }
@@ -83,6 +85,9 @@ export default function ParamForm() {
         </button>
       </form>
       {error && <p style={{ color: "red" }}>{error}</p>}
+      {remainingQuota !== null && (
+        <p style={{ marginTop: "0.5rem" }}>{messages.quota_remaining}{remainingQuota}</p>
+      )}
       {(images.facade || images.floorplan) && (
         <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
           {images.facade && (
