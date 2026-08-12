@@ -1,2 +1,2 @@
-{ "app_title": "ArchGen Building Generator", "style": "Style", "floors": "Floors", "width": "Width (m)", "depth": "Depth (m)", "material": "Material", "generate": "Generate",
+{ "app_title": "ArchGen Building Generator", "style": "Style", "floors": "Floors", "width": "Width (m)", "depth": "Depth (m)", "material": "Material", "roof": "Roof", "roof_flat": "Flat", "roof_pitched": "Pitched", "roof_hipped": "Hipped", "generate": "Generate",
   "facade_label": "Facade", "floorplan_label": "Floorplan", "generating": "Generating…", "error": "Generation failed, try again" }

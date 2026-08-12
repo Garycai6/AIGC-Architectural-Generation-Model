@@ -17,6 +17,7 @@ export default function ParamForm() {
   const [widthM, setWidthM] = useState(10);
   const [depthM, setDepthM] = useState(8);
   const [material, setMaterial] = useState("glass");
+  const [roof, setRoof] = useState("flat");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [images, setImages] = useState<ResultImages>({});
@@ -33,7 +34,7 @@ export default function ParamForm() {
           width_m: widthM,
           depth_m: depthM,
           materials: [material],
-          roof: "flat",
+          roof,
           environment: "suburb",
         },
         lang
@@ -68,6 +69,13 @@ export default function ParamForm() {
         <label>{messages.material}
           <select value={material} onChange={(e) => setMaterial(e.target.value)}>
             {MATERIALS.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </label>
+        <label>{messages.roof}
+          <select value={roof} onChange={(e) => setRoof(e.target.value)}>
+            <option value="flat">{messages.roof_flat}</option>
+            <option value="pitched">{messages.roof_pitched}</option>
+            <option value="hipped">{messages.roof_hipped}</option>
           </select>
         </label>
         <button type="submit" disabled={loading}>
