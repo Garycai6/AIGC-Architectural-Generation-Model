@@ -94,3 +94,15 @@
 - 后端零改动(roof 已有模拟器几何 + SDXL prompt 支持);全量回归 95 passed + 1 skipped
 - 遗留:environment 控件暂缓(模拟器模式无视觉差异,留待真调验证阶段)
 
+# 免费额度限制(Quota)验证记录 (2026-08-12)
+
+- QuotaService:匿名访客每日额度计数(内存 dict,新日期自然重置),consume 返回剩余次数,超限不累加
+- /generate 读 X-Visitor-Id 头;无头请求放行(向后兼容);超限返回 429 标准错误体 `{"detail":"今日免费额度已用完"}`
+- GenerationResponse 新增 remaining_quota;前端 localStorage 持 visitor_id(UUID)+ 请求带头;429 抛 QuotaExhaustedError
+- 前端展示「今日剩余生成次数:N」;429 显示「今日免费额度已用完」;i18n 中英双语
+- 后端端到端(curl):同一访客 max=5,前 5 次 200 且 remaining_quota 递减 4/3/2/1/0,第 6 次 429;不同访客独立计数
+- 前端编译:`tsc && vite build` 通过;vite dev server HTTP 200 服务正常
+- 浏览器 UI 交互验证受限:本会话 preview 工具无法托管 vite+frontend(worktree 无前端代码,junction 使 vite 崩溃),留待人工浏览器确认「点击生成→剩余次数展示→超限提示」
+- 全量回归:102 passed + 1 skipped;ruff check + format 双绿
+- 遗留:付费解锁、持久化、登录用户维度计数均留待后续(本期仅免费额度限制)
+
