@@ -79,8 +79,9 @@ def test_persist_prunes_old_dates(tmp_path: Path):
     q = QuotaService(max_free_quota=3, storage_path=storage)
     q.consume("v1", "2026-08-01")  # 旧日期(>7 天前)
     q.consume("v1", "2026-08-13")  # 今天
-    # 触发清理(每 PRUNE_INTERVAL 次写)并验证
-    q.consume("v2", "2026-08-13")
+    # 用 100 个不同访客各消费一次 → 凑足 100 次真实写盘 → 触发清理
+    for i in range(100):
+        q.consume(f"v{i}", "2026-08-13")
     data = json.loads(storage.read_text(encoding="utf-8"))
     assert "2026-08-01" not in data["v1"]  # 旧日期被清掉
     assert "2026-08-13" in data["v1"]  # 近记录保留

@@ -7,7 +7,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-PRUNE_INTERVAL = 3
+PRUNE_INTERVAL = 100
 PRUNE_DAYS = 7
 
 
