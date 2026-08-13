@@ -69,6 +69,13 @@ def test_persist_corrupt_file_falls_back_to_empty(tmp_path: Path):
     assert q.remaining("v1", "2026-08-13") == 3  # 降级空 dict,额度满额
 
 
+def test_persist_wrong_shape_json_falls_back_to_empty(tmp_path):
+    storage = tmp_path / "quota.json"
+    storage.write_text('{"v1": "not-a-dict"}', encoding="utf-8")
+    q = QuotaService(max_free_quota=3, storage_path=storage)
+    assert q.remaining("v1", "2026-08-13") == 3  # 形状错误 → 降级空 dict
+
+
 def test_persist_memory_mode_when_storage_none(tmp_path: Path):
     q = QuotaService(max_free_quota=3)
     q.consume("v1", "2026-08-13")

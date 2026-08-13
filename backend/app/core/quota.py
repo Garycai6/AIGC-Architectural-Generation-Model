@@ -34,7 +34,7 @@ class QuotaService:
                 str(k): {str(d): int(v) for d, v in day.items()} for k, day in data.items()
             }
         except (
-            FileNotFoundError,
+            OSError,
             json.JSONDecodeError,
             ValueError,
             AttributeError,
