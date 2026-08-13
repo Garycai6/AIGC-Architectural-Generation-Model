@@ -33,7 +33,13 @@ class QuotaService:
             self._counts = {
                 str(k): {str(d): int(v) for d, v in day.items()} for k, day in data.items()
             }
-        except (FileNotFoundError, json.JSONDecodeError, ValueError) as exc:
+        except (
+            FileNotFoundError,
+            json.JSONDecodeError,
+            ValueError,
+            AttributeError,
+            TypeError,
+        ) as exc:
             logger.warning("quota 持久化文件加载失败,降级为空计数: %s", exc)
             self._counts = {}
 

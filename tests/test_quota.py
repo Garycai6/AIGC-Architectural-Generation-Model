@@ -1,4 +1,5 @@
 import json
+from datetime import date, timedelta
 from pathlib import Path
 
 from backend.app.core.quota import QuotaService
@@ -77,11 +78,13 @@ def test_persist_memory_mode_when_storage_none(tmp_path: Path):
 def test_persist_prunes_old_dates(tmp_path: Path):
     storage = tmp_path / "quota.json"
     q = QuotaService(max_free_quota=3, storage_path=storage)
-    q.consume("v1", "2026-08-01")  # 旧日期(>7 天前)
-    q.consume("v1", "2026-08-13")  # 今天
+    old_date = (date.today() - timedelta(days=8)).isoformat()  # >7 天前
+    today = date.today().isoformat()
+    q.consume("v1", old_date)
+    q.consume("v1", today)
     # 用 100 个不同访客各消费一次 → 凑足 100 次真实写盘 → 触发清理
     for i in range(100):
-        q.consume(f"v{i}", "2026-08-13")
+        q.consume(f"v{i}", today)
     data = json.loads(storage.read_text(encoding="utf-8"))
-    assert "2026-08-01" not in data["v1"]  # 旧日期被清掉
-    assert "2026-08-13" in data["v1"]  # 近记录保留
+    assert old_date not in data["v1"]  # 旧日期被清掉
+    assert today in data["v1"]  # 今天保留
