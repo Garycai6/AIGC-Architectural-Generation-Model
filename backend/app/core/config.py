@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     lora_weights_dir: str = ""  # 风格 LoRA 权重公网 URL 目录,空=不注入
     cache_dir: str = ".cache/archgen"
     max_free_quota: int = 5
+    quota_storage_path: str = ""  # quota 持久化 JSON 文件路径,空=内存模式(重启清零)
 
 
 @lru_cache

@@ -275,3 +275,38 @@ def test_generate_quota_isolated_per_visitor(tmp_path):
     )
     assert resp.status_code == 200
     assert resp.json()["remaining_quota"] == 0  # max=1,consumed its only slot
+
+
+def test_generate_quota_persists_across_app_restart(tmp_path):
+    from backend.app.core.config import Settings
+
+    storage = tmp_path / "quota.json"
+    settings1 = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=2,
+        cache_dir=str(tmp_path / "cache1"),
+        quota_storage_path=str(storage),
+    )
+    client1 = TestClient(create_app(settings1))
+    headers = {"X-Visitor-Id": "visitor-1"}
+    resp1 = client1.post("/api/v1/generate", json=_quota_payload(), headers=headers)
+    assert resp1.status_code == 200
+    assert resp1.json()["remaining_quota"] == 1
+
+    # 模拟重启:新的 app 实例、同一 storage_path
+    settings2 = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=2,
+        cache_dir=str(tmp_path / "cache2"),
+        quota_storage_path=str(storage),
+    )
+    client2 = TestClient(create_app(settings2))
+    resp2 = client2.post("/api/v1/generate", json=_quota_payload(), headers=headers)
+    assert resp2.status_code == 200
+    assert resp2.json()["remaining_quota"] == 0  # 已用 1,剩 1,本次消费后 0
+    resp3 = client2.post("/api/v1/generate", json=_quota_payload(), headers=headers)
+    assert resp3.status_code == 429  # 跨重启额度保留,继续计数

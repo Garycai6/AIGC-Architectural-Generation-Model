@@ -166,6 +166,33 @@ def test_settings_lora_fields_can_be_set():
     assert settings.lora_weights_dir == "https://cdn.example.com/lora"
 
 
+def test_settings_quota_storage_path_default_empty():
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=5,
+        cache_dir=".tmp-test",
+    )
+    assert settings.quota_storage_path == ""
+
+
+def test_settings_quota_storage_path_can_be_set():
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=5,
+        cache_dir=".tmp-test",
+        quota_storage_path=".cache/archgen/quota.json",
+    )
+    assert settings.quota_storage_path == ".cache/archgen/quota.json"
+
+
 @pytest.mark.asyncio
 async def test_generate_async_run_waits_300(tmp_path: Path):
     """异步调用收到 wait=300(解除 60s read timeout)。"""

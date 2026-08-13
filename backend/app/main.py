@@ -12,7 +12,19 @@ from backend.app.core.quota import QuotaService
 def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="ArchGen API", version="0.1.0")
     app.state.settings = settings or get_settings()
-    app.state.quota_service = QuotaService(app.state.settings.max_free_quota)
+    if app.state.settings.quota_storage_path:
+        # quota 持久化文件父目录必须先于 QuotaService 构造创建(构造时加载文件)
+        pathlib.Path(app.state.settings.quota_storage_path).parent.mkdir(
+            parents=True, exist_ok=True
+        )
+    app.state.quota_service = QuotaService(
+        app.state.settings.max_free_quota,
+        storage_path=(
+            pathlib.Path(app.state.settings.quota_storage_path)
+            if app.state.settings.quota_storage_path
+            else None
+        ),
+    )
 
     @app.get("/health")
     def health() -> dict:
