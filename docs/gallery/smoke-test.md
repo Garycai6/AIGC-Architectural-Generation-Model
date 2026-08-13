@@ -106,3 +106,13 @@
 - 全量回归:102 passed + 1 skipped;ruff check + format 双绿
 - 遗留:付费解锁、持久化、登录用户维度计数均留待后续(本期仅免费额度限制)
 
+# Quota 持久化验证记录 (2026-08-13)
+
+- QuotaService 支持 storage_path(JSON 文件):构造加载,consume 后原子写盘(.tmp+os.replace),每 100 次写清理 7 天前记录
+- 损坏容错:JSON 解析失败/形状错误 → 降级空 dict + warning;写盘失败记 error 不影响服务
+- Settings.quota_storage_path 默认空=内存模式(向后兼容);非空启用持久化
+- 端到端:QUOTA_STORAGE_PATH 启动 → 消费(remaining=4)→ 重启 → 再消费(remaining=3),计数跨重启保留;quota.json 内容正确
+- 单测:持久化读写/重启恢复/损坏降级/内存模式不写盘/清理逻辑(相对日期防时间腐烂);路由级跨 app 重启保留
+- 全量回归:110 passed + 1 skipped;ruff check + format 双绿
+- 遗留:多 worker 跨进程同步(单 worker 部署够用);付费解锁仍留待后续
+
