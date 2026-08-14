@@ -116,3 +116,13 @@
 - 全量回归:110 passed + 1 skipped;ruff check + format 双绿
 - 遗留:多 worker 跨进程同步(单 worker 部署够用);付费解锁仍留待后续
 
+# 前端 environment 控件验证记录 (2026-08-13)
+
+- ParamForm 新增「环境」下拉(城市/郊区/乡村/海滨),默认「郊区」,替换硬编码 environment: "suburb"
+- 提交值用原始枚举值(urban/suburb/rural/seaside);下拉显示 i18n 本地化标签(中英双语 5 key)
+- 后端端到端(curl):4 个合法 environment 值全部 200 正常出图,非法值 desert 422 拒绝
+- 前端编译:`tsc && vite build` 通过,无 TS 类型错误
+- 浏览器 UI 交互验证受限:本会话 preview 工具无法托管 vite+frontend(与 quota 功能同款环境限制),留待人工浏览器确认「环境下拉显示/EN 切换/请求 body 原始枚举值」
+- 模拟器模式 environment 无视觉差异(已知特性,渲染器不读,真调阶段 SDXL prompt 生效)
+- 后端零改动(environment 已有参数校验 + SDXL prompt 支持);全量回归 111 passed + 1 skipped
+
