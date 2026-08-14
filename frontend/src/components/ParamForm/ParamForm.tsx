@@ -18,6 +18,7 @@ export default function ParamForm() {
   const [depthM, setDepthM] = useState(8);
   const [material, setMaterial] = useState("glass");
   const [roof, setRoof] = useState("flat");
+  const [environment, setEnvironment] = useState("suburb");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [remainingQuota, setRemainingQuota] = useState<number | null>(null);
@@ -36,7 +37,7 @@ export default function ParamForm() {
           depth_m: depthM,
           materials: [material],
           roof,
-          environment: "suburb",
+          environment,
         },
         lang
       );
@@ -78,6 +79,14 @@ export default function ParamForm() {
             <option value="flat">{messages.roof_flat}</option>
             <option value="pitched">{messages.roof_pitched}</option>
             <option value="hipped">{messages.roof_hipped}</option>
+          </select>
+        </label>
+        <label>{messages.environment}
+          <select value={environment} onChange={(e) => setEnvironment(e.target.value)}>
+            <option value="urban">{messages.environment_urban}</option>
+            <option value="suburb">{messages.environment_suburb}</option>
+            <option value="rural">{messages.environment_rural}</option>
+            <option value="seaside">{messages.environment_seaside}</option>
           </select>
         </label>
         <button type="submit" disabled={loading}>
