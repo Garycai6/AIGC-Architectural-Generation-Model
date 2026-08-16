@@ -126,3 +126,16 @@
 - 模拟器模式 environment 无视觉差异(已知特性,渲染器不读,真调阶段 SDXL prompt 生效)
 - 后端零改动(environment 已有参数校验 + SDXL prompt 支持);全量回归 111 passed + 1 skipped
 
+# 多供应商 Fal 验证记录 (2026-08-13)
+
+- FalGenerator 独立类:镜像 ApiGenerator 的 facade-only 流程;线稿 upload_file 上传拿 URL 作 control_image_url;submit_async(start_timeout=300)+ handle.get() 拿 images[0].url 落盘
+- 输入对齐 replicate:controlnet_conditioning_scale 0.5、steps 30、guidance 7.5、seed 42、1024×1024
+- Settings 新增 fal_api_key/fal_model(默认空);image_provider 增 "fal" 分支,无 token 500;正式依赖 fal-client
+- **依赖修正**:fal-client 约束 `>=0.7,<1.0` 锁定 0.14.1(1.0.0 删了 submit_async 的 timeout 参数,已改用 start_timeout;约束防未来 2.x 破坏)
+- 条件图清理加 try/finally(失败也清理,防 Windows 重命名 FileExistsError)
+- prompt.py 与 Generator 协议零改动;prompt 构造复用 build_prompt
+- mock 单测:artifact 流程/上传+参数断言/缺客户端报错/失败清理 4 例 + 路由 2 例 + Settings 2 例
+- 全量回归:119 passed + 1 skipped;ruff check + format 双绿
+- 真调留待人工:需 FAL_KEY token(.env 配 FAL_API_KEY + IMAGE_PROVIDER=fal);真调时对比两供应商成本/质量
+- 遗留:LoRA 注入(fal 的 loras 参数格式与 replicate 不同,对齐时再做);供应商自动故障切换;replicate_gen.py 同款 missing-finally 预存在未改
+
