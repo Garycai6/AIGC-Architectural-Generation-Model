@@ -9,6 +9,7 @@ from backend.app.core.quota import QuotaService
 from backend.app.schemas.generate import GenerateRequest, GenerationResponse
 from generation.generators import SimulatorGenerator
 from generation.generators.api import ApiGenerator
+from generation.generators.api.fal_gen import FAL_MODEL, FalGenerator
 from generation.generators.api.replicate_gen import SDXL_MODEL
 from generation.llm.deepseek_client import DeepSeekClient
 from generation.params.model import STYLE_NAMES
@@ -52,6 +53,15 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
             replicate_client=replicate.Client(token=settings.replicate_api_token),
             model=settings.sdxl_model or SDXL_MODEL,
             lora_urls=lora_urls,
+        )
+    elif settings.image_provider == "fal":
+        if not settings.fal_api_key:
+            raise HTTPException(status_code=500, detail="fal_api_key 未配置")
+        import fal_client
+
+        generator = FalGenerator(
+            fal_client=fal_client,
+            model=settings.fal_model or FAL_MODEL,
         )
     else:
         generator = SimulatorGenerator()

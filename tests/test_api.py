@@ -310,3 +310,54 @@ def test_generate_quota_persists_across_app_restart(tmp_path):
     assert resp2.json()["remaining_quota"] == 0  # 已用 1,剩 1,本次消费后 0
     resp3 = client2.post("/api/v1/generate", json=_quota_payload(), headers=headers)
     assert resp3.status_code == 429  # 跨重启额度保留,继续计数
+
+
+def test_generate_uses_falgenerator_when_fal(tmp_path):
+    from unittest.mock import AsyncMock, patch
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="fal",
+        max_free_quota=5,
+        cache_dir=str(tmp_path),
+        fal_api_key="test-fal-key",
+    )
+    with patch("backend.app.api.generate.FalGenerator") as mock_cls:
+        mock_gen = mock_cls.return_value
+        mock_gen.generate = AsyncMock(
+            return_value=GenerationArtifact(
+                scheme_id="s1",
+                images=[
+                    ImageRef(kind="facade", url="/images/s1/facade.png"),
+                    ImageRef(kind="floorplan", url="/images/s1/floorplan.png"),
+                ],
+            )
+        )
+        client = TestClient(create_app(settings))
+        resp = client.post(
+            "/api/v1/generate",
+            json=_quota_payload(),
+            headers={"X-Visitor-Id": "fal-test"},
+        )
+        assert resp.status_code == 200
+        mock_cls.assert_called_once()
+
+
+def test_generate_fal_missing_token_returns_500(tmp_path):
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="fal",
+        max_free_quota=5,
+        cache_dir=str(tmp_path),
+    )
+    client = TestClient(create_app(settings))
+    resp = client.post(
+        "/api/v1/generate",
+        json=_quota_payload(),
+        headers={"X-Visitor-Id": "fal-test"},
+    )
+    assert resp.status_code == 500

@@ -206,3 +206,33 @@ async def test_generate_async_run_waits_300(tmp_path: Path):
 
     kwargs = client.async_run.call_args.kwargs
     assert kwargs["wait"] == 300
+
+
+def test_settings_fal_fields_default_empty():
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="simulator",
+        max_free_quota=5,
+        cache_dir=".tmp-test",
+    )
+    assert settings.fal_api_key == ""
+    assert settings.fal_model == ""
+
+
+def test_settings_fal_fields_can_be_set():
+    from backend.app.core.config import Settings
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="fal",
+        max_free_quota=5,
+        cache_dir=".tmp-test",
+        fal_api_key="fal-key-123",
+        fal_model="fal-ai/fast-sdxl-controlnet-canny",
+    )
+    assert settings.fal_api_key == "fal-key-123"
+    assert settings.fal_model == "fal-ai/fast-sdxl-controlnet-canny"

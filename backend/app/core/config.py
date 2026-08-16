@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     cache_dir: str = ".cache/archgen"
     max_free_quota: int = 5
     quota_storage_path: str = ""  # quota 持久化 JSON 文件路径,空=内存模式(重启清零)
+    fal_api_key: str = ""  # fal 密钥,空=不可用
+    fal_model: str = ""  # fal 模型名,空=用默认 FAL_MODEL
 
 
 @lru_cache
