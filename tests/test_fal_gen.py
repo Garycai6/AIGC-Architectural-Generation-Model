@@ -70,6 +70,21 @@ async def test_uploads_lineart_and_passes_arguments(tmp_path: Path):
     assert kwargs["timeout"] == 300
 
 
+@pytest.mark.asyncio
+async def test_cleans_condition_image_on_failure(tmp_path: Path):
+    client, _ = _make_client(tmp_path)
+    # 让 submit_async 抛异常,模拟 fal 调用失败
+    client.submit_async = AsyncMock(side_effect=RuntimeError("fal down"))
+    with patch(
+        "generation.generators.api.fal_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = FalGenerator(fal_client=client)
+        with pytest.raises(RuntimeError):
+            await gen.generate(_params(), "sid-fail", tmp_path, "zh")
+    assert not (tmp_path / "facade_line.png").exists()  # finally 清理生效
+
+
 def test_missing_client_raises():
     with pytest.raises(FalGeneratorError):
         FalGenerator()

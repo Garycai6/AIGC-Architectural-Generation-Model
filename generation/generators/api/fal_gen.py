@@ -72,10 +72,12 @@ class FalGenerator:
         facade_line = out_dir / "facade_line.png"
         if line_facade.exists():
             line_facade.rename(facade_line)
-        prompt = build_prompt(params, "facade", lang)
-        control_url = await self._upload_lineart(facade_line)
-        await self._call_fal(prompt, control_url, out_dir / FACADE_FILE)
-        facade_line.unlink(missing_ok=True)
+        try:
+            prompt = build_prompt(params, "facade", lang)
+            control_url = await self._upload_lineart(facade_line)
+            await self._call_fal(prompt, control_url, out_dir / FACADE_FILE)
+        finally:
+            facade_line.unlink(missing_ok=True)
         return GenerationArtifact(
             scheme_id=scheme_id,
             images=[
@@ -85,4 +87,4 @@ class FalGenerator:
         )
 
 
-__all__ = ["FalGenerator", "FalGeneratorError"]
+__all__ = ["FalGenerator", "FalGeneratorError", "FAL_MODEL"]
