@@ -12,6 +12,7 @@ FAL_MODEL = "fal-ai/fast-sdxl-controlnet-canny"
 CONTROLNET_CONDITIONING_SCALE = 0.5  # 与 replicate 的 condition_scale 0.5 对齐
 FAL_STEPS = 30
 FAL_GUIDANCE = 7.5
+# 排队开始前等待上限(不含处理时长)
 FAL_WAIT_SECONDS = 300
 
 FACADE_FILE = "facade.png"
@@ -53,7 +54,7 @@ class FalGenerator:
             "seed": 42,
         }
         handle = await self._client.submit_async(
-            self._model, arguments=sdxl_input, timeout=FAL_WAIT_SECONDS
+            self._model, arguments=sdxl_input, start_timeout=FAL_WAIT_SECONDS
         )
         result = await handle.get()  # get() 阻塞轮询直到完成
         url = result["images"][0]["url"]

@@ -67,7 +67,7 @@ async def test_uploads_lineart_and_passes_arguments(tmp_path: Path):
     assert kwargs["arguments"]["seed"] == 42
     assert kwargs["arguments"]["image_size"] == {"width": 1024, "height": 1024}
     assert kwargs["arguments"]["prompt"]  # build_prompt 构造的非空 prompt
-    assert kwargs["timeout"] == 300
+    assert kwargs["start_timeout"] == 300
 
 
 @pytest.mark.asyncio
