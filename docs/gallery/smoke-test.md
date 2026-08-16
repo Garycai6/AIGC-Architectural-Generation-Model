@@ -136,6 +136,6 @@
 - prompt.py 与 Generator 协议零改动;prompt 构造复用 build_prompt
 - mock 单测:artifact 流程/上传+参数断言/缺客户端报错/失败清理 4 例 + 路由 2 例 + Settings 2 例
 - 全量回归:119 passed + 1 skipped;ruff check + format 双绿
-- 真调留待人工:需 FAL_KEY token(.env 配 FAL_API_KEY + IMAGE_PROVIDER=fal);真调时对比两供应商成本/质量
+- 真调留待人工:.env 配 FAL_API_KEY + IMAGE_PROVIDER=fal(路由把 fal_api_key 注入 FAL_KEY 供 SDK 使用);真调时对比两供应商成本/质量
 - 遗留:LoRA 注入(fal 的 loras 参数格式与 replicate 不同,对齐时再做);供应商自动故障切换;replicate_gen.py 同款 missing-finally 预存在未改
 

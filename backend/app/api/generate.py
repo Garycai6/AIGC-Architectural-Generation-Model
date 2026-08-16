@@ -19,7 +19,7 @@ router = APIRouter(tags=["generate"])
 
 @router.post("/generate", response_model=GenerationResponse)
 async def generate(req: GenerateRequest, request: Request) -> GenerationResponse:
-    """生成:按 image_provider 选生成器(默认模拟器,replicate 走真模型)。"""
+    """生成:按 image_provider 选生成器(默认模拟器,replicate/fal 走真模型)。"""
     settings: Settings = request.app.state.settings  # 从 app.state 读取(支持测试注入)
     quota_service: QuotaService = request.app.state.quota_service
     remaining_quota = settings.max_free_quota  # 无头请求默认报满额(向后兼容)
@@ -57,6 +57,9 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
     elif settings.image_provider == "fal":
         if not settings.fal_api_key:
             raise HTTPException(status_code=500, detail="fal_api_key 未配置")
+        import os
+
+        os.environ["FAL_KEY"] = settings.fal_api_key
         import fal_client
 
         generator = FalGenerator(

@@ -315,6 +315,8 @@ def test_generate_quota_persists_across_app_restart(tmp_path):
 def test_generate_uses_falgenerator_when_fal(tmp_path):
     from unittest.mock import AsyncMock, patch
 
+    from generation.generators.api.fal_gen import FAL_MODEL
+
     settings = Settings(
         deepseek_api_key="",
         deepseek_base_url="https://api.deepseek.com",
@@ -342,6 +344,7 @@ def test_generate_uses_falgenerator_when_fal(tmp_path):
         )
         assert resp.status_code == 200
         mock_cls.assert_called_once()
+        assert mock_cls.call_args.kwargs["model"] == FAL_MODEL
 
 
 def test_generate_fal_missing_token_returns_500(tmp_path):
