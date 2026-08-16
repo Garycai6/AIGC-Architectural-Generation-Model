@@ -10,7 +10,7 @@ dependencies = [
     "pydantic-settings>=2.4",
     "openai>=1.40",          # DeepSeek 兼容 OpenAI SDK
     "replicate>=1.0",
-    "fal-client>=0.7",
+    "fal-client>=0.7,<1.0",
     "python-multipart>=0.0.9",
     "pillow>=12.3.0",
 ]
