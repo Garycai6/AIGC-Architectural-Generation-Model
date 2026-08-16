@@ -33,6 +33,7 @@ def _train_loop(cfg):
     from diffusers.optimization import get_scheduler
     from diffusers.utils import convert_state_dict_to_diffusers
     from peft import LoraConfig, get_peft_model
+    from peft.utils import get_peft_model_state_dict
     from PIL import Image
     from safetensors.torch import save_file
     from transformers import AutoTokenizer
@@ -172,7 +173,7 @@ def _train_loop(cfg):
 
     # 6. 保存 LoRA .safetensors
     lora_path = lora_output_path(cfg.output_dir, cfg.style)
-    unet_state = convert_state_dict_to_diffusers(unet.get_peft_state_dict())
+    unet_state = convert_state_dict_to_diffusers(get_peft_model_state_dict(unet))
     save_file(unet_state, lora_path)
     print(f"[training] 已保存 LoRA → {lora_path}")
 
