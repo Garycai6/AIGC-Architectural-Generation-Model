@@ -132,7 +132,7 @@ def _train_loop(cfg):
                 return_tensors="pt",
             )
             encoder_hidden_states_2 = text_encoder_2(text_inputs_2.input_ids.to("cuda"))
-            pooled_text_embeds = encoder_hidden_states_2.pooler_output
+            pooled_text_embeds = encoder_hidden_states_2.text_embeds
             encoder_hidden_states_2 = encoder_hidden_states_2.last_hidden_state
 
             # latent 上加噪 + denoising objective
