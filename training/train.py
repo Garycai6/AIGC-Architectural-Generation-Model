@@ -114,6 +114,8 @@ def _train_loop(cfg):
             pixel_values = pixel_values.to(device="cuda", dtype=torch.float32)
             latents = vae.encode(pixel_values).latent_dist.sample()
             latents = latents * vae.config.scaling_factor
+            # VAE 用 fp32 保 latent 精度;UNet 权重是 fp16,喂入前统一转 fp16
+            latents = latents.to(dtype=unet.dtype)
 
             # 双 text encoder 各用独立 tokenizer 编码 prompt
             text_inputs = tokenizer(
@@ -157,7 +159,7 @@ def _train_loop(cfg):
                     "time_ids": torch.tensor(
                         [[cfg.resolution, cfg.resolution, 0, 0, cfg.resolution, cfg.resolution]],
                         device="cuda",
-                        dtype=torch.float32,
+                        dtype=unet.dtype,
                     ),
                 },
             ).sample
