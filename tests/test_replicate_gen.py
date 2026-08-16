@@ -236,3 +236,18 @@ def test_settings_fal_fields_can_be_set():
     )
     assert settings.fal_api_key == "fal-key-123"
     assert settings.fal_model == "fal-ai/fast-sdxl-controlnet-canny"
+
+
+@pytest.mark.asyncio
+async def test_generate_cleans_condition_image_on_failure(tmp_path: Path):
+    """SDXL 调用失败时条件图 facade_line.png 也被清理(finally 语义)。"""
+    client, real = _make_client(tmp_path)
+    client.async_run = AsyncMock(side_effect=RuntimeError("replicate down"))
+    with patch(
+        "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
+        side_effect=lambda url, dest: __import__("shutil").copyfile(url, dest),
+    ):
+        gen = ApiGenerator(replicate_client=client)
+        with pytest.raises(RuntimeError):
+            await gen.generate(_params(), "sid-fail", tmp_path, "zh")
+    assert not (tmp_path / "facade_line.png").exists()

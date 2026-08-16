@@ -98,9 +98,13 @@ class ApiGenerator:
         if line_facade.exists():
             line_facade.rename(facade_line)
         # 3. One SDXL call (facade only); floorplan stays as simulator line-art
-        await self._render_facade_sdxl(params, scheme_id, out_dir, lang)
-        # 4. Clean up the facade condition image
-        facade_line.unlink(missing_ok=True)
+        try:
+            await self._render_facade_sdxl(params, scheme_id, out_dir, lang)
+        finally:
+            # 4. Clean up the facade condition image (also on failure — a leaked
+            #    facade_line.png would make the next rename raise FileExistsError
+            #    on Windows).
+            facade_line.unlink(missing_ok=True)
         return GenerationArtifact(
             scheme_id=scheme_id,
             images=[
