@@ -144,6 +144,8 @@ def test_settings_lora_fields_default_empty():
         image_provider="simulator",
         max_free_quota=5,
         cache_dir=".tmp-test",
+        sdxl_model="",
+        lora_weights_dir="",
     )
     assert settings.sdxl_model == ""
     assert settings.lora_weights_dir == ""
@@ -175,6 +177,7 @@ def test_settings_quota_storage_path_default_empty():
         image_provider="simulator",
         max_free_quota=5,
         cache_dir=".tmp-test",
+        quota_storage_path="",
     )
     assert settings.quota_storage_path == ""
 
@@ -195,7 +198,7 @@ def test_settings_quota_storage_path_can_be_set():
 
 @pytest.mark.asyncio
 async def test_generate_async_run_waits_300(tmp_path: Path):
-    """异步调用收到 wait=300(解除 60s read timeout)。"""
+    """异步调用收到 wait=60(SDK 上限,解除 60s read timeout 的问题)。"""
     client, real = _make_client(tmp_path)
     with patch(
         "generation.generators.api.replicate_gen.urllib.request.urlretrieve",
@@ -205,7 +208,7 @@ async def test_generate_async_run_waits_300(tmp_path: Path):
         await gen.generate(_params(), "sid-w1", tmp_path, "zh")
 
     kwargs = client.async_run.call_args.kwargs
-    assert kwargs["wait"] == 300
+    assert kwargs["wait"] == 60
 
 
 def test_settings_fal_fields_default_empty():
@@ -217,6 +220,8 @@ def test_settings_fal_fields_default_empty():
         image_provider="simulator",
         max_free_quota=5,
         cache_dir=".tmp-test",
+        fal_api_key="",
+        fal_model="",
     )
     assert settings.fal_api_key == ""
     assert settings.fal_model == ""

@@ -19,7 +19,7 @@ CONTROLNET_CONDITION_SCALE = 0.5  # condition_scale(ControlNet 强度),阶段 3 
 
 FACADE_FILE = "facade.png"
 FLOORPLAN_FILE = "floorplan.png"
-SDXL_WAIT_SECONDS = 300
+SDXL_WAIT_SECONDS = 60  # replicate async_run 的 wait 参数上限 60(新版 SDK)
 
 
 class ApiGeneratorError(Exception):
