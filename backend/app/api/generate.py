@@ -45,12 +45,16 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
         if not settings.replicate_api_token:
             raise HTTPException(status_code=500, detail="replicate_api_token 未配置")
         import replicate
+        import httpx
 
         lora_urls = {}
         if settings.lora_weights_dir:
             lora_urls = {style: f"{settings.lora_weights_dir}/{style}.tar" for style in STYLE_NAMES}
         generator = ApiGenerator(
-            replicate_client=replicate.Client(api_token=settings.replicate_api_token),
+            replicate_client=replicate.Client(
+                api_token=settings.replicate_api_token,
+                timeout=httpx.Timeout(120.0),
+            ),
             model=settings.sdxl_model or SDXL_MODEL,
             lora_urls=lora_urls,
         )
