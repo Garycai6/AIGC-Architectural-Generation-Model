@@ -15,6 +15,7 @@ SDXL_MODEL = (
 CONTROLNET_TYPE = "canny"
 CONTROLNET_STEPS = 30
 CONTROLNET_GUIDANCE = 7.5
+CONTROLNET_CONDITION_SCALE = 0.5  # condition_scale(ControlNet 强度),阶段 3 真调验证 0.5 最优
 
 FACADE_FILE = "facade.png"
 FLOORPLAN_FILE = "floorplan.png"
@@ -58,6 +59,7 @@ class ApiGenerator:
                 "negative_prompt": build_negative_prompt(),
                 "image": f,
                 "model_type": CONTROLNET_TYPE,
+                "condition_scale": CONTROLNET_CONDITION_SCALE,
                 "num_inference_steps": CONTROLNET_STEPS,
                 "guidance_scale": CONTROLNET_GUIDANCE,
                 "seed": 42,
