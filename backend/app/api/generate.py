@@ -44,8 +44,8 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
     if settings.image_provider == "replicate":
         if not settings.replicate_api_token:
             raise HTTPException(status_code=500, detail="replicate_api_token 未配置")
-        import replicate
         import httpx
+        import replicate
 
         lora_urls = {}
         if settings.lora_weights_dir:
