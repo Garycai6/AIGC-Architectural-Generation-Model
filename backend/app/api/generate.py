@@ -50,7 +50,7 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
         if settings.lora_weights_dir:
             lora_urls = {style: f"{settings.lora_weights_dir}/{style}.tar" for style in STYLE_NAMES}
         generator = ApiGenerator(
-            replicate_client=replicate.Client(token=settings.replicate_api_token),
+            replicate_client=replicate.Client(api_token=settings.replicate_api_token),
             model=settings.sdxl_model or SDXL_MODEL,
             lora_urls=lora_urls,
         )
