@@ -68,16 +68,16 @@ def _train_loop(cfg):
     unet.enable_gradient_checkpointing()
 
     # 2. 加 peft LoRA(unet)
+    # 只覆盖 attention(q/k/v/out),不含 ff 层——LoRA 体积从 ~167MB 降到 ~46MB,
+    # 使 Replicate 的 lora_weights 下载可行(150MB 会 pget 超时)。
     lora_config = LoraConfig(
-        r=16,
+        r=8,
         lora_alpha=32,
         target_modules=[
             "to_q",
             "to_k",
             "to_v",
             "to_out.0",
-            "ff.net.0.proj",
-            "ff.net.2",
         ],
         lora_dropout=0.0,
         bias="none",
