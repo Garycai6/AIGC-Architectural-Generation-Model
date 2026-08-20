@@ -9,12 +9,11 @@ diffusers 原生 LoRAAttnProcessor2_0 格式(`attn1.processor.to_q_lora.down.wei
 """
 
 import argparse
-import json
 import re
 from pathlib import Path
 
-# peft 键: base_model.model.down_blocks.1.attentions.0.transformer_blocks.0.attn1.to_q.lora.down.weight
-# diffusers 键: down_blocks.1.attentions.0.transformer_blocks.0.attn1.processor.to_q_lora.down.weight
+# peft 键: ...attn1.to_q.lora.down.weight
+# diffusers 键: ...attn1.processor.to_q_lora.down.weight
 _KEY_RE = re.compile(
     r"^base_model\.model\.(?P<mod>.+?)\.attentions\.(?P<blk>\d+)\.transformer_blocks\.(?P<tb>\d+)\.(?P<attn>attn[12])\.(?P<proj>to_q|to_k|to_v|to_out\.0)\.lora\.(?P<du>down|up)\.weight$"
 )

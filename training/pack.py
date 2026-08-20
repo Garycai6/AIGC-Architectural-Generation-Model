@@ -9,10 +9,12 @@ from training.export import lora_output_path
 
 
 def pack_lora(output_dir: Path, style: str, weight_scale: float = 1.0) -> Path:
-    """把 {style}.safetensors 打成 {style}.tar(内含 lora.safetensors + special_params.json)。
+    """把 {style}.safetensors 打成 {style}.tar(内含 lora.safetensors
+    + special_params.json + embeddings.pti)。
 
     Replicate 的 LoRA 注入要求 tar 内权重重命名为 lora.safetensors;special_params.json
-    记录 LoRA 权重缩放(社区惯例)。成员名扁平,无目录前缀。
+    记录 LoRA 权重缩放(社区惯例);embeddings.pti 是文本反演占位(fermat/cog-sdxl 无条件
+    读取该文件,缺失会报 No such file,故打包空占位)。成员名扁平,无目录前缀。
     """
     src = lora_output_path(output_dir, style)
     if not src.exists():
@@ -29,6 +31,11 @@ def pack_lora(output_dir: Path, style: str, weight_scale: float = 1.0) -> Path:
         info = tarfile.TarInfo(name="special_params.json")
         info.size = len(special)
         tar.addfile(info, io.BytesIO(special))
+
+        # 文本反演占位(空),供 load_embeddings 读取
+        info = tarfile.TarInfo(name="embeddings.pti")
+        info.size = 0
+        tar.addfile(info, io.BytesIO(b""))
     return out
 
 

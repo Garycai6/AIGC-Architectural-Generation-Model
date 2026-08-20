@@ -53,7 +53,7 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
         generator = ApiGenerator(
             replicate_client=replicate.Client(
                 api_token=settings.replicate_api_token,
-                timeout=httpx.Timeout(120.0),
+                timeout=httpx.Timeout(600.0),
             ),
             model=settings.sdxl_model or SDXL_MODEL,
             lora_urls=lora_urls,

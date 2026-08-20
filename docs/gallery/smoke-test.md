@@ -139,3 +139,34 @@
 - 真调留待人工:.env 配 FAL_API_KEY + IMAGE_PROVIDER=fal(路由把 fal_api_key 注入 FAL_KEY 供 SDK 使用);真调时对比两供应商成本/质量
 - 遗留:LoRA 注入(fal 的 loras 参数格式与 replicate 不同,对齐时再做);供应商自动故障切换;replicate_gen.py 同款 missing-finally 预存在未改
 
+# LoRA 真调记录 (2026-08-17~08-20,卡点 + 结论)
+
+## 已完成(成功)
+
+- **云端训练成功**:4 风格 SDXL LoRA(现代/古典/欧式/北欧),每风格 ~46MB(`r=8` + attention-only 缩小体积)
+- **LoRA 有效性已验证**:云端 `training verify` 出样例图 `modern_sample.png`,LoRA 学到风格(本地推理有效)
+- **Replicate 无 LoRA 真调成功**:15.8s 出图,`fermatresearch/sdxl-controlnet-lora` 模型可用,链路通
+- **代码修复落地**:`replicate.Client` 用 `api_token` 参数、`wait=60`(SDK 上限)、`httpx.Timeout(600)`、`condition_scale=0.5`
+
+## 卡点(未解决):Replicate 容器 `pget` 无法解压 LoRA tar
+
+- **现象**:带 LoRA 的真调全部失败,错误是 `pget` 下载+解压 tar 时报错:
+  - gzip tar(Python tarfile 打包)→ `unexpected non-null byte in padding: 41`
+  - gzip tar(GNU tar 打包)→ `unexpected non-null byte in padding: ff`
+  - 纯 tar(未压缩)→ pget 不解压(只识别 gzip 魔数),把整个 tar 当文件 → `HeaderTooSmall`
+- **已排查排除**:
+  - tar 文件本身完好(本机 Python/GNU tar/gzip 都能正常解压,成员、键名都正确)
+  - 不是文件大小(46MB 正常,下载 2 秒完成)
+  - 不是 R2 托管(本机可正常下载;换 v2 路径绕过缓存仍失败)
+  - 不是 LoRA 键名(已转成 diffusers processor 格式 `attn1.processor.to_q_lora.down.weight`)
+  - 不是缺 `embeddings.pti`(已补占位)
+- **根因判断**:pget(Go 的 gzip/tar 解压器)对 tar.gz 内部结构的校验与我们的 tar 不兼容,且对所有打包方式(gzip/纯 tar)都失败——疑似 pget 自身 bug 或与 R2 返回内容的兼容问题。**超出本机可控范围,无法继续调试。**
+
+## 结论
+
+- **LoRA 有效性已由云端 verify 样例图验证**(这是 LoRA 的核心价值,达成)
+- **Replicate 网页注入 LoRA 受 `pget` 兼容性限制**,暂无法通过 URL 注入我们的 tar
+- **替代路径**(如需网页注入):用 Fal(不依赖 pget)注入,或 Replicate 官方训练接口(内部生成的 LoRA 格式一定兼容)
+- **代码状态**:训练 + 键名转换脚本(`training/convert_lora_keys.py`)已落地,后续若换路径可直接复用
+- 遗留:`replicate_gen.py` 的 lora_urls 注入逻辑保留(未来用兼容 tar 即可触发)
+
