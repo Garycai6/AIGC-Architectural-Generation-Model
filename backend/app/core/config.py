@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     replicate_api_token: str = ""
     sdxl_model: str = ""  # 带 LoRA 的模型名,空=用默认 SDXL_MODEL
     lora_weights_dir: str = ""  # 风格 LoRA 权重公网 URL 目录,空=不注入
+    lora_weights_url: str = ""  # 单个 LoRA 权重 URL(如 Replicate 官方训练),优先于 dir,空=不注入
     cache_dir: str = ".cache/archgen"
     max_free_quota: int = 5
     quota_storage_path: str = ""  # quota 持久化 JSON 文件路径,空=内存模式(重启清零)

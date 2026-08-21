@@ -48,7 +48,11 @@ async def generate(req: GenerateRequest, request: Request) -> GenerationResponse
         import replicate
 
         lora_urls = {}
-        if settings.lora_weights_dir:
+        if settings.lora_weights_url:
+            # 单个权重 URL(如 Replicate 官方训练的 trained_model.tar),所有风格共用
+            lora_urls = {style: settings.lora_weights_url for style in STYLE_NAMES}
+        elif settings.lora_weights_dir:
+            # 目录形式:按 {dir}/{style}.tar 组装
             lora_urls = {style: f"{settings.lora_weights_dir}/{style}.tar" for style in STYLE_NAMES}
         generator = ApiGenerator(
             replicate_client=replicate.Client(

@@ -173,6 +173,7 @@ def test_generate_replicate_injects_lora_and_model(tmp_path):
         replicate_api_token="test-token",
         sdxl_model="fermatresearch/sdxl-controlnet-lora:latest",
         lora_weights_dir="https://cdn.example.com/lora",
+        lora_weights_url="",  # 显式清空,避免从 .env 读入
     )
     with patch("backend.app.api.generate.ApiGenerator") as mock_cls:
         mock_gen = mock_cls.return_value
@@ -209,6 +210,58 @@ def test_generate_replicate_injects_lora_and_model(tmp_path):
             "neoclassic": "https://cdn.example.com/lora/neoclassic.tar",
             "european": "https://cdn.example.com/lora/european.tar",
             "nordic": "https://cdn.example.com/lora/nordic.tar",
+        }
+
+
+def test_generate_replicate_single_lora_url(tmp_path):
+    """lora_weights_url(单 URL,如 Replicate 官方训练)→ 所有风格共用同一权重 URL。"""
+    from unittest.mock import AsyncMock, patch
+
+    settings = Settings(
+        deepseek_api_key="",
+        deepseek_base_url="https://api.deepseek.com",
+        image_provider="replicate",
+        max_free_quota=5,
+        cache_dir=str(tmp_path),
+        replicate_api_token="test-token",
+        sdxl_model="fermatresearch/sdxl-controlnet-lora:latest",
+        lora_weights_dir="",  # 清空,避免 .env 干扰
+        lora_weights_url="https://replicate.delivery/xxx/trained_model.tar",
+    )
+    with patch("backend.app.api.generate.ApiGenerator") as mock_cls:
+        mock_gen = mock_cls.return_value
+        mock_gen.generate = AsyncMock(
+            return_value=GenerationArtifact(
+                scheme_id="s1",
+                images=[
+                    ImageRef(kind="facade", url="/images/s1/facade.png"),
+                    ImageRef(kind="floorplan", url="/images/s1/floorplan.png"),
+                ],
+            )
+        )
+        client = TestClient(create_app(settings))
+        resp = client.post(
+            "/api/v1/generate",
+            json={
+                "params": {
+                    "style": "modern",
+                    "floors": 3,
+                    "width_m": 10.0,
+                    "depth_m": 8.0,
+                    "materials": ["glass"],
+                    "roof": "flat",
+                    "environment": "suburb",
+                },
+                "lang": "zh",
+            },
+        )
+        assert resp.status_code == 200
+        kwargs = mock_cls.call_args.kwargs
+        assert kwargs["lora_urls"] == {
+            "modern": "https://replicate.delivery/xxx/trained_model.tar",
+            "neoclassic": "https://replicate.delivery/xxx/trained_model.tar",
+            "european": "https://replicate.delivery/xxx/trained_model.tar",
+            "nordic": "https://replicate.delivery/xxx/trained_model.tar",
         }
 
 
