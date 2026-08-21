@@ -170,3 +170,30 @@
 - **代码状态**:训练 + 键名转换脚本(`training/convert_lora_keys.py`)已落地,后续若换路径可直接复用
 - 遗留:`replicate_gen.py` 的 lora_urls 注入逻辑保留(未来用兼容 tar 即可触发)
 
+# LoRA 真调突破 (2026-08-21,Replicate 官方训练路径打通)
+
+## 卡点解决:改用 Replicate 官方训练接口
+
+- **之前卡点**:自己训练(peft)的 LoRA tar,Replicate 容器 `pget` 无法解压(padding 错误/HeaderTooSmall)
+- **突破**:改用 **Replicate 官方训练接口**(`stability-ai/sdxl` trainings API),它生成的权重**格式必然兼容 Replicate 加载**
+
+## 成功流程
+
+1. **训练**:`POST /v1/trainings`,`model=stability-ai/sdxl`,`input={input_images: <zip URL>, is_lora: true, resolution: 1024, max_train_steps: 1000}`,`destination=garycai6/archgen-modern-lora`
+   - 训练图:41 张 modern facade 图打成 zip 上传 R2(`train-data/.tmp_modern_train.zip`)
+   - **耗时约 5 分钟,成本约 $1.5~3**(训练成功,返回 `trained_model.tar` 权重 URL)
+2. **注入**:`.env` 配 `LORA_WEIGHTS_URL=<trained_model.tar URL>`(新增字段,单 URL 形式,优先级高于 `LORA_WEIGHTS_DIR`)
+3. **真调**:`/api/v1/generate` → **HTTP 200 成功出图**(facade 911KB 真图 + floorplan 模拟器线稿)
+
+## 关键代码改动
+
+- `Settings` 新增 `lora_weights_url`(单 URL 注入,适配 Replicate 官方训练产物)
+- `generate.py`:优先用 `lora_weights_url`(单 URL,所有风格共用);否则 `lora_weights_dir` 目录拼接
+- 测试:`test_generate_replicate_single_lora_url`(单 URL 分支)+ 修复 `test_generate_replicate_injects_lora_and_model` 隔离 .env
+
+## 结论(更新)
+
+- **LoRA 网页注入已走通**(Replicate 官方训练 + fermat 模型注入)
+- 后续:训练其余 3 个风格(neoclassic/european/nordic,各约 $1.5~3),配对应权重 URL 即可
+- **效果目检**:modern facade 911KB 真图已生成,需人工对比「有 LoRA vs 无 LoRA」确认风格化程度
+
